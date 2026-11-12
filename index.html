@@ -97,7 +97,7 @@ label input,label select{color:var(--ink);width:100%}
   <div id="stageWrap">
     <div id="stage">
       <canvas id="map" aria-hidden="true"></canvas>
-      <canvas id="hud" role="img" aria-label="Radar showing friends, waypoints and your places within 2.5 miles"></canvas>
+      <canvas id="hud" role="img" aria-label="Radar showing friends, waypoints and your saved markers within 2.5 miles"></canvas>
       <div id="attr">© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors</div>
     </div>
   </div>
@@ -115,7 +115,7 @@ label input,label select{color:var(--ink);width:100%}
   <nav id="tabs" role="tablist" aria-label="Lists">
     <button type="button" role="tab" data-tab="friends" id="tab-friends">Friends</button>
     <button type="button" role="tab" data-tab="waypoints" id="tab-waypoints">Waypoints</button>
-    <button type="button" role="tab" data-tab="places" id="tab-places">Places</button>
+    <button type="button" role="tab" data-tab="places" id="tab-places">Markers</button>
   </nav>
   <section id="panel" aria-live="polite"></section>
 </div>
@@ -130,6 +130,16 @@ label input,label select{color:var(--ink);width:100%}
     <label>Kind<select id="wpKind"><option>Hang out</option><option>Food</option><option>Game</option><option>Study</option><option>Ride</option><option>Other</option></select></label>
     <label>Stays up for<select id="wpHours"><option value="1">1 hour</option><option value="3" selected>3 hours</option><option value="8">8 hours</option><option value="24">24 hours</option></select></label>
     <div class="row"><button type="submit" class="primary grow">Post to friends</button><button type="button" id="wpCancel">Cancel</button></div>
+  </form>
+</dialog>
+
+<dialog id="mkDialog">
+  <form id="mkForm">
+    <h2 style="margin:0;font:1.1em var(--font-display);text-transform:uppercase">New marker</h2>
+    <label>Kind<select id="mkKind"><option value="home">Home</option><option value="work">Work</option><option value="school">School</option><option value="meetup">Meetup spot</option></select></label>
+    <label>Name<input id="mkName" maxlength="30" required placeholder="Home"></label>
+    <label style="flex-direction:row;align-items:center;gap:8px;color:var(--ink)"><input id="mkShared" type="checkbox" style="width:auto;min-height:0"> Show this marker to my friends</label>
+    <div class="row"><button type="submit" class="primary grow">Save marker</button><button type="button" id="mkCancel">Cancel</button></div>
   </form>
 </dialog>
 
@@ -159,16 +169,16 @@ const REDUCED = matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 const SKINS = {
   sonar:    { label: "Sonar",     tiles: "osm", filter: "invert(1) grayscale(1) brightness(.8) contrast(1.3) sepia(1) hue-rotate(75deg) saturate(3)", px: 1, upper: true,
-              font: '"Share Tech Mono",monospace', size: 12, land: "#03160c",
+              font: '"Share Tech Mono",monospace', size: 12, land: "#f2efe9",
               c: { ring: "rgba(57,255,136,.6)", faint: "rgba(57,255,136,.22)", text: "#c8ffe0", halo: "rgba(0,12,5,.85)", me: "#f2fff7", friend: "#39ff88", way: "#ffd166", place: "#7fe9ff", tint: "rgba(0,50,22,.25)" } },
   parchment:{ label: "Parchment", tiles: "osm", filter: "sepia(.95) saturate(.75) contrast(.9) brightness(1.02)", px: 1, upper: false,
-              font: '"IM Fell English SC",Georgia,serif', size: 14, land: "#e2cf9d",
+              font: '"IM Fell English SC",Georgia,serif', size: 14, land: "#f2efe9",
               c: { ring: "rgba(74,50,20,.7)", faint: "rgba(74,50,20,.28)", text: "#2e1f0c", halo: "rgba(243,231,198,.9)", me: "#8c2f1b", friend: "#1f4b3a", way: "#8c2f1b", place: "#3b2a14", tint: "rgba(196,160,92,.18)" } },
   tactical: { label: "Tactical",  tiles: "osm", filter: "invert(1) grayscale(1) brightness(.85) contrast(1.25)", px: 1, upper: true,
-              font: '600 13px "Rajdhani",sans-serif', size: 13, land: "#0d1218",
+              font: '600 13px "Rajdhani",sans-serif', size: 13, land: "#f2efe9",
               c: { ring: "rgba(120,200,255,.6)", faint: "rgba(120,200,255,.2)", text: "#e3eef8", halo: "rgba(6,10,14,.85)", me: "#ffb000", friend: "#5fd0ff", way: "#ffb000", place: "#b8c7d6", tint: "rgba(10,30,50,.2)" } },
   pixel:    { label: "Pixel",     tiles: "osm", filter: "saturate(1.7) contrast(1.15)", px: 4, upper: true,
-              font: '"VT323",monospace', size: 17, land: "#86b87a",
+              font: '"VT323",monospace', size: 17, land: "#f2efe9",
               c: { ring: "rgba(29,27,58,.85)", rl: "#fdf6e3", faint: "rgba(29,27,58,.35)", text: "#fdf6e3", halo: "#1d1b3a", me: "#ff5d8f", friend: "#ffcc00", way: "#ff5d8f", place: "#ffffff", tint: "rgba(0,0,0,0)" } }
 };
 const fontOf = sk => /px/.test(sk.font) ? sk.font : sk.size + "px " + sk.font;
@@ -223,7 +233,7 @@ function until(ts) { const s = (ts - Date.now()) / 1000; return s < 3600 ? Math.
 const S = {
   skin: store.get("fr-skin", "sonar"), expanded: false, tab: "friends",
   me: { ...SAMPLE, real: false }, view: { ...SAMPLE, mpp: 40 }, follow: true,
-  profile: null, friends: [], incoming: [], outgoing: [], waypoints: [], places: {},
+  profile: null, friends: [], incoming: [], outgoing: [], waypoints: [], markers: [],
   placing: null, pendingSpot: null, sel: null, ghost: store.get("fr-ghost", false),
   tilesOk: false, tileFails: 0, hits: [], size: { w: 300, h: 300 }
 };
@@ -241,7 +251,8 @@ function demoApi() {
     { id: "d4", name: "Lou",   brg: 320, mi: 0.6, drift: 2.2 },
     { id: "d5", name: "Priya", brg: 95,  mi: 6.8, drift: 0.4 }
   ];
-  let st = store.get("fr-demo", null) || { code: "DEMO" + Math.floor(1000 + Math.random() * 9000), friends: seedFriends, incoming: [{ id: "d6", name: "Sasha", brg: 200, mi: 1.9, drift: 1 }], waypoints: null, places: {} };
+  let st = store.get("fr-demo", null) || { code: "DEMO" + Math.floor(1000 + Math.random() * 9000), friends: seedFriends, incoming: [{ id: "d6", name: "Sasha", brg: 200, mi: 1.9, drift: 1 }], waypoints: null, markers: [] };
+  if (!st.markers) { st.markers = Object.entries(st.places || {}).map(([k, p], i) => ({ id: "m" + i + k, kind: k, name: k[0].toUpperCase() + k.slice(1), lat: p.lat, lng: p.lng, shared: false })); delete st.places; }
   const save = () => store.set("fr-demo", st);
   const t0 = Date.now();
   const pos = f => offset(S.me, f.brg + Math.sin((Date.now() - t0) / 9000 * f.drift) * 9, (f.mi + Math.cos((Date.now() - t0) / 14000 * f.drift) * 0.12) * MI);
@@ -251,6 +262,7 @@ function demoApi() {
     async snapshot() {
       if (!st.waypoints) {
         st.waypoints = [{ id: "w1", ownerId: "d1", ownerName: "Mara", title: "Tacos at 7", kind: "Food", ...offset(S.me, 105, 2.3 * MI), expiresAt: Date.now() + 3 * 3600e3, joiners: ["Dev"], joined: false }];
+        st.friendMarkers = [{ id: "fm1", ownerId: "d2", ownerName: "Dev", kind: "meetup", name: "The courts", ...offset(S.me, 300, 1.1 * MI), shared: true }];
         save();
       }
       st.waypoints = st.waypoints.filter(w => w.expiresAt > Date.now());
@@ -258,14 +270,17 @@ function demoApi() {
         profile: { name: "You", code: st.code },
         friends: st.friends.map(f => ({ id: f.id, name: f.name, ...pos(f), updatedAt: f.id === "d3" ? Date.now() - 22 * 60e3 : Date.now() })),
         incoming: st.incoming.map(f => ({ id: f.id, name: f.name })), outgoing: [],
-        waypoints: st.waypoints.map(w => ({ ...w, mine: w.ownerId === "me" })), places: st.places
+        waypoints: st.waypoints.map(w => ({ ...w, mine: w.ownerId === "me" })),
+        markers: [...st.markers.map(m => ({ ...m, mine: true, ownerId: "me", ownerName: "You" })), ...(st.friendMarkers || []).map(m => ({ ...m, mine: false }))]
       };
     },
     async addFriend(code) { st.friends.push({ id: "c" + Date.now(), name: "Player " + code.slice(0, 4).toUpperCase(), brg: Math.random() * 360, mi: 0.5 + Math.random() * 4, drift: 1 }); save(); return "Added a sample friend. With real accounts this sends a request."; },
     async acceptFriend(id) { const i = st.incoming.findIndex(f => f.id === id); if (i >= 0) { st.friends.push(st.incoming.splice(i, 1)[0]); save(); } },
     async removeFriend(id) { st.friends = st.friends.filter(f => f.id !== id); st.incoming = st.incoming.filter(f => f.id !== id); save(); },
     async pushLocation() {}, async setSharing() {},
-    async setPlace(kind, p) { if (p) st.places[kind] = { lat: p.lat, lng: p.lng }; else delete st.places[kind]; save(); },
+    async addMarker(m) { st.markers.push({ id: "m" + Date.now(), ...m }); save(); },
+    async deleteMarker(id) { st.markers = st.markers.filter(m => m.id !== id); save(); },
+    async shareMarker(id, on) { const m = st.markers.find(m => m.id === id); if (m) { m.shared = on; save(); } },
     async addWaypoint(w) { st.waypoints.push({ id: "w" + Date.now(), ownerId: "me", ownerName: "You", joiners: [], joined: false, ...w }); save(); },
     async deleteWaypoint(id) { st.waypoints = st.waypoints.filter(w => w.id !== id); save(); },
     async joinWaypoint(id, on) { const w = st.waypoints.find(w => w.id === id); if (!w) return; w.joined = on; w.joiners = w.joiners.filter(n => n !== "You"); if (on) w.joiners.push("You"); save(); },
@@ -294,7 +309,7 @@ function supabaseApi() {
         sb.from("profiles").select("name,code").eq("id", uid).single(),
         sb.from("friendships").select("id,requester,addressee,status"),
         sb.from("waypoints").select("*").gt("expires_at", now),
-        sb.from("places").select("kind,lat,lng").eq("user_id", uid)
+        sb.from("markers").select("*")
       ]);
       const rows = ok(fr), other = r => r.requester === uid ? r.addressee : r.requester, ids = [...new Set(rows.map(other))];
       const wps = ok(wp), wids = wps.map(w => w.id);
@@ -312,7 +327,7 @@ function supabaseApi() {
         incoming: rows.filter(r => r.status === "pending" && r.addressee === uid).map(person),
         outgoing: rows.filter(r => r.status === "pending" && r.requester === uid).map(person),
         waypoints: wps.map(w => { const js = ok(jn).filter(j => j.waypoint_id === w.id); return { id: w.id, ownerId: w.owner, ownerName: who(w.owner), mine: w.owner === uid, title: w.title, kind: w.kind, lat: w.lat, lng: w.lng, expiresAt: Date.parse(w.expires_at), joiners: js.map(j => who(j.user_id)), joined: js.some(j => j.user_id === uid) }; }),
-        places: Object.fromEntries(ok(pl).map(p => [p.kind, { lat: p.lat, lng: p.lng }]))
+        markers: ok(pl).map(m => ({ id: m.id, ownerId: m.owner, ownerName: who(m.owner), mine: m.owner === uid, kind: m.kind, name: m.name, lat: m.lat, lng: m.lng, shared: m.shared }))
       };
     },
     async addFriend(code) { ok(await sb.rpc("send_friend_request", { friend_code: code.trim().toUpperCase() })); return "Friend request sent."; },
@@ -320,7 +335,9 @@ function supabaseApi() {
     async removeFriend(id) { ok(await sb.from("friendships").delete().eq("id", id)); },
     async pushLocation(p) { ok(await sb.from("locations").upsert({ user_id: uid, lat: p.lat, lng: p.lng, updated_at: new Date().toISOString() })); },
     async setSharing(on) { if (!on) ok(await sb.from("locations").delete().eq("user_id", uid)); },
-    async setPlace(kind, p) { if (p) ok(await sb.from("places").upsert({ user_id: uid, kind, lat: p.lat, lng: p.lng })); else ok(await sb.from("places").delete().eq("user_id", uid).eq("kind", kind)); },
+    async addMarker(m) { ok(await sb.from("markers").insert({ owner: uid, kind: m.kind, name: m.name, lat: m.lat, lng: m.lng, shared: m.shared })); },
+    async deleteMarker(id) { ok(await sb.from("markers").delete().eq("id", id)); },
+    async shareMarker(id, on) { ok(await sb.from("markers").update({ shared: on }).eq("id", id)); },
     async addWaypoint(w) { ok(await sb.from("waypoints").insert({ owner: uid, title: w.title, kind: w.kind, lat: w.lat, lng: w.lng, expires_at: new Date(w.expiresAt).toISOString() })); },
     async deleteWaypoint(id) { ok(await sb.from("waypoints").delete().eq("id", id)); },
     async joinWaypoint(id, on) { if (on) ok(await sb.from("waypoint_joins").upsert({ waypoint_id: id, user_id: uid })); else ok(await sb.from("waypoint_joins").delete().eq("waypoint_id", id).eq("user_id", uid)); }
@@ -331,7 +348,7 @@ const api = LIVE ? supabaseApi() : demoApi();
 async function refresh() {
   try {
     const d = await api.snapshot();
-    Object.assign(S, { profile: d.profile, friends: d.friends, incoming: d.incoming, outgoing: d.outgoing, waypoints: d.waypoints, places: d.places });
+    Object.assign(S, { profile: d.profile, friends: d.friends, incoming: d.incoming, outgoing: d.outgoing, waypoints: d.waypoints, markers: d.markers });
     if (!panelBusy()) renderPanel();
     renderCard();
   } catch (e) { toast("Could not refresh: " + e.message); }
@@ -409,6 +426,7 @@ function glyph(kind, x, y, color) {
   ctx.save(); ctx.translate(x, y); ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = 1.8; ctx.lineJoin = "round"; ctx.lineCap = "round";
   ctx.beginPath();
   if (kind === "home") { ctx.moveTo(-8, 0); ctx.lineTo(0, -8); ctx.lineTo(8, 0); ctx.moveTo(-5.5, -1.5); ctx.lineTo(-5.5, 7); ctx.lineTo(5.5, 7); ctx.lineTo(5.5, -1.5); ctx.moveTo(-1.5, 7); ctx.lineTo(-1.5, 2.5); ctx.lineTo(1.5, 2.5); ctx.lineTo(1.5, 7); }
+  else if (kind === "meetup") { for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, r = i % 2 ? 4 : 9; ctx[i ? "lineTo" : "moveTo"](Math.cos(a) * r, Math.sin(a) * r); } ctx.closePath(); }
   else if (kind === "school") { ctx.moveTo(-9, -2); ctx.lineTo(0, -6.5); ctx.lineTo(9, -2); ctx.lineTo(0, 2.5); ctx.closePath(); ctx.moveTo(-5, 0.5); ctx.lineTo(-5, 5); ctx.quadraticCurveTo(0, 8.5, 5, 5); ctx.lineTo(5, 0.5); ctx.moveTo(9, -2); ctx.lineTo(9, 4); }
   else { ctx.rect(-8, -3, 16, 10.5); ctx.moveTo(-3, -3); ctx.lineTo(-3, -6.5); ctx.lineTo(3, -6.5); ctx.lineTo(3, -3); ctx.moveTo(-8, 1.5); ctx.lineTo(8, 1.5); }
   ctx.stroke(); ctx.restore();
@@ -468,17 +486,17 @@ function drawHud(t) {
   const hits = [], isSel = (type, id) => S.sel && S.sel.type === type && S.sel.id === id;
   const selRing = (x, y) => { ctx.strokeStyle = c.text; ctx.lineWidth = 2; shape(MARK[S.skin], x, y, 15); ctx.stroke(); };
 
-  // places (only you see these)
-  for (const kind of ["home", "school", "work"]) {
-    const p = S.places[kind]; if (!p) continue;
-    const s = toScreen(p), far = dist(S.me, p) > RANGE;
+  // permanent markers: yours, plus ones friends chose to share
+  for (const m of S.markers) {
+    const s = toScreen(m), far = dist(S.me, m) > RANGE;
     if (far && !S.expanded) continue;
+    const col = m.mine ? c.place : c.friend;
     ctx.fillStyle = c.halo; shape(S.skin === "pixel" || S.skin === "tactical" ? "square" : "circle", s.x, s.y, 13); ctx.fill();
-    ctx.strokeStyle = c.place; ctx.lineWidth = 1.5; ctx.stroke();
-    glyph(kind, s.x, s.y, c.place);
-    label(kind, s.x, s.y + 15, c.place);
-    if (isSel("place", kind)) selRing(s.x, s.y);
-    hits.push({ type: "place", id: kind, x: s.x, y: s.y });
+    ctx.strokeStyle = col; ctx.lineWidth = 1.5; ctx.stroke();
+    glyph(m.kind, s.x, s.y, col);
+    label(m.name, s.x, s.y + 15, col);
+    if (isSel("place", m.id)) selRing(s.x, s.y);
+    hits.push({ type: "place", id: m.id, x: s.x, y: s.y });
   }
 
   // waypoints
@@ -580,7 +598,7 @@ function tap(x, y) {
     if (!S.expanded && Math.hypot(x - S.size.w / 2, y - S.size.h / 2) > Math.min(S.size.w, S.size.h) / 2) return;
     setPlacing(null);
     if (kind === "waypoint") { S.pendingSpot = p; $("wpTitle").value = ""; $("wpDialog").showModal(); }
-    else act(() => api.setPlace(kind, p), kind[0].toUpperCase() + kind.slice(1) + " set.");
+    else openMarkerDialog(p);
     return;
   }
   let best = null, bd = 26;
@@ -588,10 +606,16 @@ function tap(x, y) {
   S.sel = best ? { type: best.type, id: best.id } : null;
   renderCard();
 }
+const KIND_LABEL = { home: "Home", work: "Work", school: "School", meetup: "Meetup spot" };
+function openMarkerDialog(p) {
+  S.pendingSpot = p; $("mkKind").value = "home"; $("mkName").value = ""; $("mkName").placeholder = "Home"; $("mkShared").checked = false;
+  $("mkDialog").showModal();
+}
+function meetAt(m) { S.pendingSpot = { lat: m.lat, lng: m.lng }; $("wpTitle").value = m.name; $("wpDialog").showModal(); }
 function setPlacing(kind) {
   S.placing = kind;
   $("banner").hidden = !kind;
-  if (kind) $("bannerText").textContent = kind === "waypoint" ? "Tap the map where you want friends to meet you." : "Tap the map to mark " + kind + ".";
+  if (kind) $("bannerText").textContent = kind === "waypoint" ? "Tap the map where you want friends to meet you." : "Tap the map where the marker should go.";
 }
 
 /* =====================================================================
@@ -617,8 +641,14 @@ function renderCard() {
       h("div", { class: "row" }, wpt.mine
         ? h("button", { type: "button", on: { click: () => { S.sel = null; act(() => api.deleteWaypoint(wpt.id), "Waypoint removed."); } } }, "Remove waypoint")
         : h("button", { type: "button", class: wpt.joined ? "" : "primary", on: { click: () => act(() => api.joinWaypoint(wpt.id, !wpt.joined)) } }, wpt.joined ? "Leave" : "I'm in"))];
-  } else if (s.type === "place" && S.places[s.id]) {
-    kids = [h("h2", {}, s.id), h("div", { class: "meta" }, fmtDist(dist(S.me, S.places[s.id])) + " " + compass(bearing(S.me, S.places[s.id])) + " of you · only you can see this")];
+  } else if (s.type === "place") {
+    const m = S.markers.find(x => x.id === s.id);
+    if (m) kids = [h("h2", {}, m.name),
+      h("div", { class: "meta" }, KIND_LABEL[m.kind] + " · " + fmtDist(dist(S.me, m)) + " " + compass(bearing(S.me, m)) + " of you · " + (m.mine ? (m.shared ? "your friends can see this" : "only you can see this") : "shared by " + m.ownerName)),
+      h("div", { class: "row" },
+        h("button", { type: "button", class: "primary", on: { click: () => meetAt(m) } }, "Meet here"),
+        m.mine ? h("button", { type: "button", on: { click: () => act(() => api.shareMarker(m.id, !m.shared), m.shared ? "Marker is private again." : "Friends can now see this marker.") } }, m.shared ? "Stop sharing" : "Share with friends") : null,
+        m.mine ? h("button", { type: "button", on: { click: () => { S.sel = null; act(() => api.deleteMarker(m.id), "Marker removed."); } } }, "Remove") : null)];
   }
   if (!kids) { S.sel = null; card.hidden = true; return; }
   card.append(...kids); card.hidden = false;
@@ -660,15 +690,16 @@ function renderPanel() {
       h("div", { class: "grow" }, h("div", { class: "name" }, wpt.title), h("div", { class: "meta" }, wpt.kind + " · " + wpt.ownerName + " · " + fmtDist(dist(S.me, wpt)) + " · " + until(wpt.expiresAt) + (wpt.joiners.length ? " · " + wpt.joiners.length + " going" : ""))),
       h("button", { type: "button", on: { click: () => select("waypoint", wpt.id) } }, "Show")));
   } else {
-    p.append(h("div", { class: "meta" }, "Home, school and work show only on your own radar."));
-    for (const kind of ["home", "school", "work"]) {
-      const pl = S.places[kind];
-      p.append(h("div", { class: "item" },
-        h("div", { class: "grow" }, h("div", { class: "name", style: "text-transform:capitalize" }, kind), h("div", { class: "meta" }, pl ? fmtDist(dist(S.me, pl)) + " " + compass(bearing(S.me, pl)) + " of you" : "Not set")),
-        h("button", { type: "button", on: { click: () => { setPlacing(kind); $("stage").scrollIntoView({ block: "nearest" }); } } }, "Pick on map"),
-        h("button", { type: "button", on: { click: () => act(() => api.setPlace(kind, S.me), "Marked where you are now.") } }, "I'm here"),
-        pl ? h("button", { type: "button", on: { click: () => act(() => api.setPlace(kind, null)) } }, "Clear") : null));
-    }
+    p.append(h("div", { class: "meta" }, "Markers stay until you remove them. They are private unless you choose to share one with friends."),
+      h("div", { class: "row" },
+        h("button", { type: "button", class: "primary grow", on: { click: () => { setPlacing("marker"); $("stage").scrollIntoView({ block: "nearest" }); } } }, "Add marker on map"),
+        h("button", { type: "button", class: "grow", on: { click: () => openMarkerDialog({ lat: S.me.lat, lng: S.me.lng }) } }, "Add where I am")));
+    if (!S.markers.length) p.append(h("div", { class: "item" }, "No markers yet. Add your home, work, or a spot you keep meeting at."));
+    const mk = S.markers.slice().sort((a, b) => b.mine - a.mine || dist(S.me, a) - dist(S.me, b));
+    for (const m of mk) p.append(h("div", { class: "item" },
+      h("div", { class: "grow" }, h("div", { class: "name" }, m.name),
+        h("div", { class: "meta" }, KIND_LABEL[m.kind] + " · " + fmtDist(dist(S.me, m)) + " " + compass(bearing(S.me, m)) + " · " + (m.mine ? (m.shared ? "shared with friends" : "private") : "from " + m.ownerName))),
+      h("button", { type: "button", on: { click: () => select("place", m.id) } }, "Show")));
   }
 }
 
@@ -715,6 +746,15 @@ $("drop").addEventListener("click", () => setPlacing(S.placing === "waypoint" ? 
 $("cancelPlace").addEventListener("click", () => setPlacing(null));
 $("ghost").addEventListener("click", () => { setGhost(!S.ghost); act(() => api.setSharing(!S.ghost), S.ghost ? "Friends can no longer see you." : "Sharing your location with friends."); if (!S.ghost) lastPush = { t: 0, p: null }; });
 $("wpCancel").addEventListener("click", () => $("wpDialog").close());
+$("mkCancel").addEventListener("click", () => $("mkDialog").close());
+$("mkKind").addEventListener("change", () => { const k = $("mkKind").value; $("mkName").placeholder = k === "meetup" ? "The usual park" : KIND_LABEL[k]; $("mkShared").checked = k === "meetup"; });
+$("mkForm").addEventListener("submit", e => {
+  e.preventDefault();
+  const name = $("mkName").value.trim(); if (!name || !S.pendingSpot) return;
+  const m = { kind: $("mkKind").value, name, lat: S.pendingSpot.lat, lng: S.pendingSpot.lng, shared: $("mkShared").checked };
+  $("mkDialog").close(); S.tab = "places";
+  act(() => api.addMarker(m), "Marker saved.");
+});
 $("wpForm").addEventListener("submit", e => {
   e.preventDefault();
   const title = $("wpTitle").value.trim(); if (!title || !S.pendingSpot) return;
@@ -722,7 +762,7 @@ $("wpForm").addEventListener("submit", e => {
   $("wpDialog").close(); S.tab = "waypoints";
   act(() => api.addWaypoint(w), "Waypoint posted to your friends.");
 });
-document.addEventListener("keydown", e => { if (e.key === "Escape") { if (S.placing) setPlacing(null); else if (S.expanded && !$("wpDialog").open) setExpanded(false); } });
+document.addEventListener("keydown", e => { if (e.key === "Escape") { if (S.placing) setPlacing(null); else if (S.expanded && !$("wpDialog").open && !$("mkDialog").open) setExpanded(false); } });
 new ResizeObserver(() => { resize(); if (S.follow || !S.expanded) fitRange(); }).observe(stage);
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { mapDirty = true; });
 

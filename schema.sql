@@ -143,3 +143,25 @@ create policy "join a friend's waypoint" on public.waypoint_joins for insert to 
   with check (user_id = auth.uid() and exists (select 1 from public.waypoints w where w.id = waypoint_id
               and (w.owner = auth.uid() or public.is_friend(w.owner, auth.uid()))));
 create policy "leave waypoint" on public.waypoint_joins for delete to authenticated using (user_id = auth.uid());
+
+-- Permanent markers: any number of homes, workplaces, schools and repeat meetup spots.
+-- Private by default; the owner can share one with accepted friends.
+-- (The older `places` table above is no longer used by the app.)
+create table public.markers (
+  id uuid primary key default gen_random_uuid(),
+  owner uuid not null references public.profiles on delete cascade,
+  kind text not null check (kind in ('home','work','school','meetup')),
+  name text not null check (char_length(name) between 1 and 30),
+  lat double precision not null,
+  lng double precision not null,
+  shared boolean not null default false,
+  created_at timestamptz not null default now()
+);
+create index markers_owner_idx on public.markers (owner);
+alter table public.markers enable row level security;
+
+create policy "see own markers and friends' shared ones" on public.markers for select to authenticated
+  using (owner = auth.uid() or (shared and public.is_friend(owner, auth.uid())));
+create policy "add marker"    on public.markers for insert to authenticated with check (owner = auth.uid());
+create policy "edit marker"   on public.markers for update to authenticated using (owner = auth.uid()) with check (owner = auth.uid());
+create policy "remove marker" on public.markers for delete to authenticated using (owner = auth.uid());
