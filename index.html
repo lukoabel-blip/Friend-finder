@@ -1,0 +1,760 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Friend Radar</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IM+Fell+English+SC&family=IM+Fell+English:ital@0;1&family=Press+Start+2P&family=Rajdhani:wght@500;600;700&family=Share+Tech+Mono&family=VT323&display=swap" rel="stylesheet">
+<style>
+/* Layout: radar disc on top, overlay-style chips, tabbed drawer below.
+   Expanded = full-bleed street map with floating controls. Each skin is its own visual world. */
+:root{
+  --bg:#04110a; --panel:#0a2014; --line:#1c5a37; --ink:#b9ffd6; --dim:#62b088; --accent:#39ff88; --warn:#ffd166;
+  --font-ui:"Share Tech Mono",ui-monospace,Menlo,monospace; --font-display:"Share Tech Mono",ui-monospace,Menlo,monospace;
+  --fs:15px; --ds:20px; --radius:4px; --edge:1px; color-scheme:dark;
+}
+body[data-skin="parchment"]{--bg:#e6d5a8;--panel:#f2e6c4;--line:#a2844e;--ink:#3b2a14;--dim:#75603a;--accent:#8c2f1b;--warn:#8c2f1b;
+  --font-ui:"IM Fell English",Georgia,serif;--font-display:"IM Fell English SC",Georgia,serif;--fs:17px;--ds:25px;--radius:2px;--edge:1px;color-scheme:light}
+body[data-skin="tactical"]{--bg:#0b0f14;--panel:#121a23;--line:#2e3f50;--ink:#d7e3ee;--dim:#8296a8;--accent:#ffb000;--warn:#ff5a4d;
+  --font-ui:"Rajdhani","Segoe UI",sans-serif;--font-display:"Rajdhani","Segoe UI",sans-serif;--fs:17px;--ds:23px;--radius:0;--edge:1px}
+body[data-skin="pixel"]{--bg:#1d1b3a;--panel:#2b2859;--line:#6a66c4;--ink:#fdf6e3;--dim:#b4b0dc;--accent:#ffcc00;--warn:#ff5d8f;
+  --font-ui:"VT323",ui-monospace,monospace;--font-display:"Press Start 2P",ui-monospace,monospace;--fs:20px;--ds:14px;--radius:0;--edge:3px}
+
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--ink);font:var(--fs)/1.35 var(--font-ui);-webkit-text-size-adjust:100%}
+#app{max-width:520px;margin:0 auto;padding:12px 16px 28px;display:flex;flex-direction:column;gap:12px}
+header{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+h1{font:var(--ds)/1.1 var(--font-display);margin:0;letter-spacing:.04em;text-transform:uppercase;flex:1 1 auto}
+button,input,select{font:inherit;color:var(--ink);background:var(--panel);border:var(--edge) solid var(--line);border-radius:var(--radius);padding:7px 11px;min-height:38px}
+button{cursor:pointer}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+button.primary{background:var(--accent);color:var(--bg);border-color:var(--accent);font-weight:700}
+button[aria-pressed="true"],button[aria-checked="true"],button[aria-selected="true"]{border-color:var(--accent);color:var(--accent)}
+.chip{font-size:.8em;border:var(--edge) solid var(--line);padding:2px 8px;border-radius:var(--radius);color:var(--dim);text-transform:uppercase;letter-spacing:.06em}
+.chip.live{color:var(--accent);border-color:var(--accent)}
+
+#stageWrap{display:flex;justify-content:center}
+#stage{position:relative;width:min(100%,56vh,440px);aspect-ratio:1;border-radius:50%;overflow:hidden;background:var(--panel);
+  border:calc(var(--edge) + 1px) solid var(--line);box-shadow:0 0 0 4px var(--bg),0 0 0 5px var(--line)}
+body[data-skin="sonar"] #stage{box-shadow:0 0 28px rgba(57,255,136,.25),inset 0 0 40px rgba(0,0,0,.6)}
+body[data-skin="pixel"] #stage{border-radius:0;box-shadow:6px 6px 0 #0d0c20}
+#stage canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+#map{image-rendering:auto}
+body[data-skin="pixel"] #map{image-rendering:pixelated}
+#hud{touch-action:pan-y}
+body.expanded #stage{position:fixed;inset:0;width:auto;height:auto;aspect-ratio:auto;border-radius:0;border:0;box-shadow:none;z-index:10}
+body.expanded #hud{touch-action:none}
+#ctl{position:absolute;right:10px;bottom:10px;display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;z-index:3}
+#ctlRow{display:flex;justify-content:center;gap:8px;flex-wrap:wrap}
+body.expanded #ctlRow{position:fixed;left:10px;right:10px;top:10px;z-index:12;justify-content:space-between}
+#banner{position:fixed;left:16px;right:16px;bottom:16px;z-index:14;background:var(--panel);border:var(--edge) solid var(--accent);border-radius:var(--radius);
+  padding:10px 12px;display:flex;align-items:center;gap:10px;justify-content:space-between}
+#attr{pointer-events:auto;position:absolute;left:50%;transform:translateX(-50%);bottom:20px;font:10px/1.2 system-ui,sans-serif;color:#fff;background:rgba(0,0,0,.45);padding:1px 6px;border-radius:8px;white-space:nowrap;z-index:2}
+#attr a{color:inherit}
+body.expanded #attr{left:8px;transform:none;bottom:8px}
+#tileNote{text-align:center}
+body.expanded #tileNote{display:none}
+
+#card{background:var(--panel);border:var(--edge) solid var(--accent);border-radius:var(--radius);padding:10px 12px;display:flex;flex-direction:column;gap:6px}
+body.expanded #card{position:fixed;left:10px;right:10px;bottom:34px;z-index:12}
+#card h2{font:1.05em var(--font-display);margin:0;text-transform:uppercase;letter-spacing:.04em}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.grow{flex:1 1 140px;min-width:0}
+.meta{color:var(--dim);font-size:.88em}
+#skins,#tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+#tabs{grid-template-columns:repeat(3,1fr)}
+#skins button{padding:6px 2px;font-size:.85em;text-transform:uppercase;letter-spacing:.03em}
+#panel{display:flex;flex-direction:column;gap:10px}
+.item{border:var(--edge) solid var(--line);border-radius:var(--radius);padding:8px 10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;background:var(--panel)}
+.item .name{font-weight:700;overflow-wrap:anywhere}
+.dot{width:10px;height:10px;border-radius:50%;background:var(--accent);flex:none}
+body[data-skin="pixel"] .dot,body[data-skin="tactical"] .dot{border-radius:0}
+.dot.off{background:var(--dim)}
+h3{font:.8em var(--font-display);text-transform:uppercase;letter-spacing:.1em;color:var(--dim);margin:4px 0 0}
+code.code{font:1.1em var(--font-ui);letter-spacing:.18em;color:var(--accent)}
+dialog{background:var(--panel);color:var(--ink);border:var(--edge) solid var(--accent);border-radius:var(--radius);padding:16px;width:min(92vw,380px)}
+dialog::backdrop{background:rgba(0,0,0,.6)}
+dialog form,#auth form{display:flex;flex-direction:column;gap:10px}
+label{display:flex;flex-direction:column;gap:4px;font-size:.9em;color:var(--dim)}
+label input,label select{color:var(--ink);width:100%}
+#auth{position:fixed;inset:0;z-index:30;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:16px}
+#auth form{width:min(100%,360px)}
+#toast{position:fixed;left:50%;bottom:16px;width:max-content;transform:translateX(-50%);z-index:40;background:var(--panel);border:var(--edge) solid var(--warn);color:var(--ink);padding:8px 12px;border-radius:var(--radius);max-width:90vw}
+[hidden]{display:none !important}
+</style>
+</head>
+<body data-skin="sonar">
+<div id="app">
+  <header>
+    <h1>Friend Radar</h1>
+    <span id="mode" class="chip">Demo</span>
+    <span id="locChip" class="chip">Sample location</span>
+    <button id="ghost" type="button" aria-pressed="false">Sharing on</button>
+  </header>
+
+  <div id="stageWrap">
+    <div id="stage">
+      <canvas id="map" aria-hidden="true"></canvas>
+      <canvas id="hud" role="img" aria-label="Radar showing friends, waypoints and your places within 5 miles"></canvas>
+      <div id="attr">© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> © <a href="https://carto.com/attributions">CARTO</a></div>
+    </div>
+  </div>
+  <div id="tileNote" class="meta" hidden>Street tiles are blocked in this preview, so a plain grid stands in. The real street map loads once the app is hosted.</div>
+  <div id="ctlRow">
+    <button id="expand" type="button">Expand map</button>
+    <button id="recenter" type="button" hidden>Recenter</button>
+    <button id="drop" type="button" class="primary">Drop waypoint</button>
+    <button id="skinCycle" type="button" hidden>Style</button>
+  </div>
+
+  <div id="card" hidden></div>
+
+  <div id="skins" role="radiogroup" aria-label="Overlay style"></div>
+  <nav id="tabs" role="tablist" aria-label="Lists">
+    <button type="button" role="tab" data-tab="friends" id="tab-friends">Friends</button>
+    <button type="button" role="tab" data-tab="waypoints" id="tab-waypoints">Waypoints</button>
+    <button type="button" role="tab" data-tab="places" id="tab-places">Places</button>
+  </nav>
+  <section id="panel" aria-live="polite"></section>
+</div>
+
+<div id="banner" hidden><span id="bannerText"></span><button id="cancelPlace" type="button">Cancel</button></div>
+<div id="toast" role="status" hidden></div>
+
+<dialog id="wpDialog">
+  <form id="wpForm">
+    <h2 style="margin:0;font:1.1em var(--font-display);text-transform:uppercase">New waypoint</h2>
+    <label>What's happening?<input id="wpTitle" maxlength="40" required placeholder="Pickup basketball"></label>
+    <label>Kind<select id="wpKind"><option>Hang out</option><option>Food</option><option>Game</option><option>Study</option><option>Ride</option><option>Other</option></select></label>
+    <label>Stays up for<select id="wpHours"><option value="1">1 hour</option><option value="3" selected>3 hours</option><option value="8">8 hours</option><option value="24">24 hours</option></select></label>
+    <div class="row"><button type="submit" class="primary grow">Post to friends</button><button type="button" id="wpCancel">Cancel</button></div>
+  </form>
+</dialog>
+
+<div id="auth" hidden>
+  <form id="authForm">
+    <h1>Friend Radar</h1>
+    <label>Email<input id="authEmail" type="email" autocomplete="email" required></label>
+    <label>Password<input id="authPass" type="password" autocomplete="current-password" minlength="8" required></label>
+    <label id="authNameWrap" hidden>Display name<input id="authName" maxlength="24" autocomplete="nickname"></label>
+    <button type="submit" class="primary" id="authGo">Sign in</button>
+    <button type="button" id="authSwap">New here? Create an account</button>
+    <div id="authMsg" class="meta"></div>
+  </form>
+</div>
+
+<script>
+"use strict";
+/* ============ CONFIG: paste your Supabase project values here to go live ============ */
+const CONFIG = { SUPABASE_URL: "https://vtrahdqxgwwwohraflfg.supabase.co", SUPABASE_ANON_KEY: "sb_publishable_GHa9cWwiK8-nhuVlPdaocg_GjpRCihT" };
+const SUPABASE_JS = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js";
+/* =================================================================================== */
+
+const MI = 1609.344, RANGE = 5 * MI, TAU = Math.PI * 2, RAD = Math.PI / 180;
+const SAMPLE = { lat: 34.1184, lng: -118.3004 }; // used until the device gives a real position
+const LIVE = !!(CONFIG.SUPABASE_URL && CONFIG.SUPABASE_ANON_KEY);
+const REDUCED = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+const SKINS = {
+  sonar:    { label: "Sonar",     tiles: "dark_all",            filter: "sepia(1) hue-rotate(75deg) saturate(2.6) brightness(.95) contrast(1.15)", px: 1, upper: true,
+              font: '"Share Tech Mono",monospace', size: 12, land: "#03160c",
+              c: { ring: "rgba(57,255,136,.6)", faint: "rgba(57,255,136,.22)", text: "#c8ffe0", halo: "rgba(0,12,5,.85)", me: "#f2fff7", friend: "#39ff88", way: "#ffd166", place: "#7fe9ff", tint: "rgba(0,50,22,.25)" } },
+  parchment:{ label: "Parchment", tiles: "rastertiles/voyager", filter: "sepia(.95) saturate(.75) contrast(.9) brightness(1.02)", px: 1, upper: false,
+              font: '"IM Fell English SC",Georgia,serif', size: 14, land: "#e2cf9d",
+              c: { ring: "rgba(74,50,20,.7)", faint: "rgba(74,50,20,.28)", text: "#2e1f0c", halo: "rgba(243,231,198,.9)", me: "#8c2f1b", friend: "#1f4b3a", way: "#8c2f1b", place: "#3b2a14", tint: "rgba(196,160,92,.18)" } },
+  tactical: { label: "Tactical",  tiles: "dark_all",            filter: "grayscale(1) contrast(1.25) brightness(1.2)", px: 1, upper: true,
+              font: '600 13px "Rajdhani",sans-serif', size: 13, land: "#0d1218",
+              c: { ring: "rgba(120,200,255,.6)", faint: "rgba(120,200,255,.2)", text: "#e3eef8", halo: "rgba(6,10,14,.85)", me: "#ffb000", friend: "#5fd0ff", way: "#ffb000", place: "#b8c7d6", tint: "rgba(10,30,50,.2)" } },
+  pixel:    { label: "Pixel",     tiles: "rastertiles/voyager", filter: "saturate(1.7) contrast(1.15)", px: 4, upper: true,
+              font: '"VT323",monospace', size: 17, land: "#86b87a",
+              c: { ring: "rgba(29,27,58,.85)", rl: "#fdf6e3", faint: "rgba(29,27,58,.35)", text: "#fdf6e3", halo: "#1d1b3a", me: "#ff5d8f", friend: "#ffcc00", way: "#ff5d8f", place: "#ffffff", tint: "rgba(0,0,0,0)" } }
+};
+const fontOf = sk => /px/.test(sk.font) ? sk.font : sk.size + "px " + sk.font;
+
+/* ---------- small helpers ---------- */
+const $ = id => document.getElementById(id);
+function h(tag, props, ...kids) {
+  const el = document.createElement(tag);
+  for (const k in (props || {})) {
+    if (k === "on") for (const ev in props.on) el.addEventListener(ev, props.on[ev]);
+    else if (k === "class") el.className = props[k];
+    else if (k in el) el[k] = props[k];
+    else el.setAttribute(k, props[k]);
+  }
+  for (const kid of kids.flat()) if (kid != null && kid !== false) el.append(kid);
+  return el;
+}
+const store = {
+  get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+};
+let toastTimer;
+function toast(msg) { const t = $("toast"); t.textContent = msg; t.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => t.hidden = true, 4000); }
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+
+/* ---------- geo math ---------- */
+function dist(a, b) {
+  const dLat = (b.lat - a.lat) * RAD, dLng = (b.lng - a.lng) * RAD;
+  const s = Math.sin(dLat / 2) ** 2 + Math.cos(a.lat * RAD) * Math.cos(b.lat * RAD) * Math.sin(dLng / 2) ** 2;
+  return 2 * 6371008.8 * Math.asin(Math.sqrt(s));
+}
+function bearing(a, b) {
+  const y = Math.sin((b.lng - a.lng) * RAD) * Math.cos(b.lat * RAD);
+  const x = Math.cos(a.lat * RAD) * Math.sin(b.lat * RAD) - Math.sin(a.lat * RAD) * Math.cos(b.lat * RAD) * Math.cos((b.lng - a.lng) * RAD);
+  return (Math.atan2(y, x) / RAD + 360) % 360;
+}
+function offset(p, bearingDeg, meters) {
+  const d = meters / 6371008.8, br = bearingDeg * RAD, la = p.lat * RAD;
+  const lat = Math.asin(Math.sin(la) * Math.cos(d) + Math.cos(la) * Math.sin(d) * Math.cos(br));
+  const lng = p.lng * RAD + Math.atan2(Math.sin(br) * Math.sin(d) * Math.cos(la), Math.cos(d) - Math.sin(la) * Math.sin(lat));
+  return { lat: lat / RAD, lng: lng / RAD };
+}
+const mx = lng => (lng + 180) / 360;
+const my = lat => { const s = lat * RAD; return (1 - Math.log(Math.tan(s) + 1 / Math.cos(s)) / Math.PI) / 2; };
+const latFromMy = y => Math.atan(Math.sinh(Math.PI * (1 - 2 * y))) / RAD;
+function fmtDist(m) { const mi = m / MI; return mi < 0.1 ? Math.round(m * 3.28084 / 10) * 10 + " ft" : mi.toFixed(mi < 10 ? 1 : 0) + " mi"; }
+const compass = deg => ["N", "NE", "E", "SE", "S", "SW", "W", "NW"][Math.round(deg / 45) % 8];
+function ago(ts) { const s = (Date.now() - ts) / 1000; return s < 90 ? "just now" : s < 3600 ? Math.round(s / 60) + " min ago" : s < 86400 ? Math.round(s / 3600) + " hr ago" : Math.round(s / 86400) + " d ago"; }
+function until(ts) { const s = (ts - Date.now()) / 1000; return s < 3600 ? Math.max(1, Math.round(s / 60)) + " min left" : Math.round(s / 3600) + " hr left"; }
+
+/* ---------- state ---------- */
+const S = {
+  skin: store.get("fr-skin", "sonar"), expanded: false, tab: "friends",
+  me: { ...SAMPLE, real: false }, view: { ...SAMPLE, mpp: 40 }, follow: true,
+  profile: null, friends: [], incoming: [], outgoing: [], waypoints: [], places: {},
+  placing: null, pendingSpot: null, sel: null, ghost: store.get("fr-ghost", false),
+  tilesOk: false, tileFails: 0, hits: [], size: { w: 300, h: 300 }
+};
+if (!SKINS[S.skin]) S.skin = "sonar";
+
+/* =====================================================================
+   DATA LAYER. Two interchangeable backends with the same methods:
+   demo (this browser only, sample friends) and Supabase (real accounts).
+   ===================================================================== */
+function demoApi() {
+  const seedFriends = [
+    { id: "d1", name: "Mara",  brg: 40,  mi: 1.3, drift: 0.9 },
+    { id: "d2", name: "Dev",   brg: 155, mi: 2.7, drift: 1.6 },
+    { id: "d3", name: "Kenji", brg: 250, mi: 3.9, drift: 0.5 },
+    { id: "d4", name: "Lou",   brg: 320, mi: 0.6, drift: 2.2 },
+    { id: "d5", name: "Priya", brg: 95,  mi: 6.8, drift: 0.4 }
+  ];
+  let st = store.get("fr-demo", null) || { code: "DEMO" + Math.floor(1000 + Math.random() * 9000), friends: seedFriends, incoming: [{ id: "d6", name: "Sasha", brg: 200, mi: 1.9, drift: 1 }], waypoints: null, places: {} };
+  const save = () => store.set("fr-demo", st);
+  const t0 = Date.now();
+  const pos = f => offset(S.me, f.brg + Math.sin((Date.now() - t0) / 9000 * f.drift) * 9, (f.mi + Math.cos((Date.now() - t0) / 14000 * f.drift) * 0.12) * MI);
+  return {
+    live: false,
+    async init() { return true; },
+    async snapshot() {
+      if (!st.waypoints) {
+        st.waypoints = [{ id: "w1", ownerId: "d1", ownerName: "Mara", title: "Tacos at 7", kind: "Food", ...offset(S.me, 105, 2.3 * MI), expiresAt: Date.now() + 3 * 3600e3, joiners: ["Dev"], joined: false }];
+        save();
+      }
+      st.waypoints = st.waypoints.filter(w => w.expiresAt > Date.now());
+      return {
+        profile: { name: "You", code: st.code },
+        friends: st.friends.map(f => ({ id: f.id, name: f.name, ...pos(f), updatedAt: f.id === "d3" ? Date.now() - 22 * 60e3 : Date.now() })),
+        incoming: st.incoming.map(f => ({ id: f.id, name: f.name })), outgoing: [],
+        waypoints: st.waypoints.map(w => ({ ...w, mine: w.ownerId === "me" })), places: st.places
+      };
+    },
+    async addFriend(code) { st.friends.push({ id: "c" + Date.now(), name: "Player " + code.slice(0, 4).toUpperCase(), brg: Math.random() * 360, mi: 0.5 + Math.random() * 4, drift: 1 }); save(); return "Added a sample friend. With real accounts this sends a request."; },
+    async acceptFriend(id) { const i = st.incoming.findIndex(f => f.id === id); if (i >= 0) { st.friends.push(st.incoming.splice(i, 1)[0]); save(); } },
+    async removeFriend(id) { st.friends = st.friends.filter(f => f.id !== id); st.incoming = st.incoming.filter(f => f.id !== id); save(); },
+    async pushLocation() {}, async setSharing() {},
+    async setPlace(kind, p) { if (p) st.places[kind] = { lat: p.lat, lng: p.lng }; else delete st.places[kind]; save(); },
+    async addWaypoint(w) { st.waypoints.push({ id: "w" + Date.now(), ownerId: "me", ownerName: "You", joiners: [], joined: false, ...w }); save(); },
+    async deleteWaypoint(id) { st.waypoints = st.waypoints.filter(w => w.id !== id); save(); },
+    async joinWaypoint(id, on) { const w = st.waypoints.find(w => w.id === id); if (!w) return; w.joined = on; w.joiners = w.joiners.filter(n => n !== "You"); if (on) w.joiners.push("You"); save(); },
+    async signOut() {}
+  };
+}
+
+function supabaseApi() {
+  let sb, uid = null;
+  const ok = r => { if (r.error) throw new Error(r.error.message); return r.data; };
+  return {
+    live: true,
+    async init() {
+      await new Promise((res, rej) => { const s = document.createElement("script"); s.src = SUPABASE_JS; s.onload = res; s.onerror = () => rej(new Error("Could not load the Supabase library.")); document.head.append(s); });
+      sb = window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY);
+      const { data } = await sb.auth.getSession();
+      uid = data.session ? data.session.user.id : null;
+      return !!uid;
+    },
+    async signIn(email, password) { const d = ok(await sb.auth.signInWithPassword({ email, password })); uid = d.user.id; },
+    async signUp(email, password, name) { const d = ok(await sb.auth.signUp({ email, password, options: { data: { name } } })); if (d.session) { uid = d.user.id; return true; } return false; },
+    async signOut() { await sb.auth.signOut(); uid = null; },
+    async snapshot() {
+      const now = new Date().toISOString();
+      const [me, fr, wp, pl] = await Promise.all([
+        sb.from("profiles").select("name,code").eq("id", uid).single(),
+        sb.from("friendships").select("id,requester,addressee,status"),
+        sb.from("waypoints").select("*").gt("expires_at", now),
+        sb.from("places").select("kind,lat,lng").eq("user_id", uid)
+      ]);
+      const rows = ok(fr), other = r => r.requester === uid ? r.addressee : r.requester, ids = [...new Set(rows.map(other))];
+      const wps = ok(wp), wids = wps.map(w => w.id);
+      const [pr, loc, jn] = await Promise.all([
+        ids.length ? sb.from("profiles").select("id,name").in("id", ids) : { data: [] },
+        ids.length ? sb.from("locations").select("*").in("user_id", ids) : { data: [] },
+        wids.length ? sb.from("waypoint_joins").select("waypoint_id,user_id").in("waypoint_id", wids) : { data: [] }
+      ]);
+      const names = new Map(ok(pr).map(p => [p.id, p.name])), locs = new Map(ok(loc).map(l => [l.user_id, l]));
+      const who = id => id === uid ? "You" : names.get(id) || "Someone";
+      const person = r => ({ id: r.id, userId: other(r), name: who(other(r)) });
+      return {
+        profile: ok(me),
+        friends: rows.filter(r => r.status === "accepted").map(r => { const l = locs.get(other(r)); return { ...person(r), lat: l ? l.lat : null, lng: l ? l.lng : null, updatedAt: l ? Date.parse(l.updated_at) : 0 }; }),
+        incoming: rows.filter(r => r.status === "pending" && r.addressee === uid).map(person),
+        outgoing: rows.filter(r => r.status === "pending" && r.requester === uid).map(person),
+        waypoints: wps.map(w => { const js = ok(jn).filter(j => j.waypoint_id === w.id); return { id: w.id, ownerId: w.owner, ownerName: who(w.owner), mine: w.owner === uid, title: w.title, kind: w.kind, lat: w.lat, lng: w.lng, expiresAt: Date.parse(w.expires_at), joiners: js.map(j => who(j.user_id)), joined: js.some(j => j.user_id === uid) }; }),
+        places: Object.fromEntries(ok(pl).map(p => [p.kind, { lat: p.lat, lng: p.lng }]))
+      };
+    },
+    async addFriend(code) { ok(await sb.rpc("send_friend_request", { friend_code: code.trim().toUpperCase() })); return "Friend request sent."; },
+    async acceptFriend(id) { ok(await sb.rpc("accept_friend_request", { request_id: id })); },
+    async removeFriend(id) { ok(await sb.from("friendships").delete().eq("id", id)); },
+    async pushLocation(p) { ok(await sb.from("locations").upsert({ user_id: uid, lat: p.lat, lng: p.lng, updated_at: new Date().toISOString() })); },
+    async setSharing(on) { if (!on) ok(await sb.from("locations").delete().eq("user_id", uid)); },
+    async setPlace(kind, p) { if (p) ok(await sb.from("places").upsert({ user_id: uid, kind, lat: p.lat, lng: p.lng })); else ok(await sb.from("places").delete().eq("user_id", uid).eq("kind", kind)); },
+    async addWaypoint(w) { ok(await sb.from("waypoints").insert({ owner: uid, title: w.title, kind: w.kind, lat: w.lat, lng: w.lng, expires_at: new Date(w.expiresAt).toISOString() })); },
+    async deleteWaypoint(id) { ok(await sb.from("waypoints").delete().eq("id", id)); },
+    async joinWaypoint(id, on) { if (on) ok(await sb.from("waypoint_joins").upsert({ waypoint_id: id, user_id: uid })); else ok(await sb.from("waypoint_joins").delete().eq("waypoint_id", id).eq("user_id", uid)); }
+  };
+}
+const api = LIVE ? supabaseApi() : demoApi();
+
+async function refresh() {
+  try {
+    const d = await api.snapshot();
+    Object.assign(S, { profile: d.profile, friends: d.friends, incoming: d.incoming, outgoing: d.outgoing, waypoints: d.waypoints, places: d.places });
+    if (!panelBusy()) renderPanel();
+    renderCard();
+  } catch (e) { toast("Could not refresh: " + e.message); }
+}
+async function act(fn, okMsg) { try { const m = await fn(); if (m || okMsg) toast(m || okMsg); await refresh(); } catch (e) { toast(e.message); } }
+
+/* =====================================================================
+   MAP + RADAR RENDERING
+   ===================================================================== */
+const stage = $("stage"), mapC = $("map"), hudC = $("hud"), mctx = mapC.getContext("2d"), ctx = hudC.getContext("2d");
+let mapDirty = true;
+const tiles = new Map();
+function tile(set, z, x, y) {
+  const key = set + "/" + z + "/" + x + "/" + y;
+  let t = tiles.get(key);
+  if (!t) {
+    t = { img: new Image(), ok: false };
+    t.img.onload = () => { t.ok = true; S.tilesOk = true; $("tileNote").hidden = true; mapDirty = true; };
+    t.img.onerror = () => { if (!S.tilesOk && ++S.tileFails >= 4) $("tileNote").hidden = false; };
+    t.img.src = "https://" + "abcd"[(x + y) % 4] + ".basemaps.cartocdn.com/" + key + ".png";
+    tiles.set(key, t);
+    if (tiles.size > 400) tiles.delete(tiles.keys().next().value);
+  }
+  return t;
+}
+const worldW = v => 40075016.686 * Math.cos(v.lat * RAD) / v.mpp; // width of the whole world in CSS px
+function toScreen(p) { const W = worldW(S.view); return { x: (mx(p.lng) - mx(S.view.lng)) * W + S.size.w / 2, y: (my(p.lat) - my(S.view.lat)) * W + S.size.h / 2 }; }
+function toLatLng(x, y) { const W = worldW(S.view); return { lng: ((x - S.size.w / 2) / W + mx(S.view.lng)) * 360 - 180, lat: latFromMy((y - S.size.h / 2) / W + my(S.view.lat)) }; }
+
+function resize() {
+  const r = stage.getBoundingClientRect(), sk = SKINS[S.skin], dpr = Math.min(window.devicePixelRatio || 1, 2);
+  S.size = { w: r.width, h: r.height };
+  hudC.width = Math.round(r.width * dpr); hudC.height = Math.round(r.height * dpr);
+  const mk = sk.px > 1 ? 1 / sk.px : dpr;
+  mapC.width = Math.max(1, Math.round(r.width * mk)); mapC.height = Math.max(1, Math.round(r.height * mk));
+  mapC.style.filter = sk.filter;
+  mapDirty = true;
+}
+function fitRange() { const half = Math.min(S.size.w, S.size.h) / 2; S.view.mpp = RANGE / Math.max(40, half - (S.expanded ? 14 : 3)); }
+
+function drawMap() {
+  mapDirty = false;
+  const sk = SKINS[S.skin], { w, h } = S.size, k = mapC.width / w;
+  mctx.setTransform(k, 0, 0, k, 0, 0);
+  mctx.imageSmoothingEnabled = sk.px === 1;
+  mctx.fillStyle = sk.land; mctx.fillRect(0, 0, w, h);
+  const W = worldW(S.view), z = clamp(Math.round(Math.log2(W / 256)), 1, 19), n = 2 ** z, ts = W / n;
+  const cx = mx(S.view.lng), cy = my(S.view.lat);
+  const x0 = Math.floor((cx - w / 2 / W) * n), x1 = Math.floor((cx + w / 2 / W) * n);
+  const y0 = Math.floor((cy - h / 2 / W) * n), y1 = Math.floor((cy + h / 2 / W) * n);
+  for (let ty = y0; ty <= y1; ty++) {
+    if (ty < 0 || ty >= n) continue;
+    for (let tx = x0; tx <= x1; tx++) {
+      const t = tile(sk.tiles, z, ((tx % n) + n) % n, ty);
+      if (t.ok) mctx.drawImage(t.img, (tx / n - cx) * W + w / 2, (ty / n - cy) * W + h / 2, ts + 0.6, ts + 0.6);
+    }
+  }
+}
+
+function shape(kind, x, y, r) {
+  ctx.beginPath();
+  if (kind === "circle") ctx.arc(x, y, r, 0, TAU);
+  else if (kind === "square") ctx.rect(x - r, y - r, r * 2, r * 2);
+  else if (kind === "diamond") { ctx.moveTo(x, y - r * 1.25); ctx.lineTo(x + r * 1.25, y); ctx.lineTo(x, y + r * 1.25); ctx.lineTo(x - r * 1.25, y); ctx.closePath(); }
+}
+const MARK = { sonar: "circle", parchment: "circle", tactical: "diamond", pixel: "square" };
+function label(text, x, y, color, align) {
+  const sk = SKINS[S.skin];
+  ctx.font = fontOf(sk); ctx.textAlign = align || "center"; ctx.textBaseline = "top";
+  const s = sk.upper ? text.toUpperCase() : text;
+  ctx.lineJoin = "round"; ctx.lineWidth = S.skin === "pixel" ? 4 : 3; ctx.strokeStyle = sk.c.halo; ctx.strokeText(s, x, y);
+  ctx.fillStyle = color || sk.c.text; ctx.fillText(s, x, y);
+}
+function glyph(kind, x, y, color) {
+  ctx.save(); ctx.translate(x, y); ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = 1.8; ctx.lineJoin = "round"; ctx.lineCap = "round";
+  ctx.beginPath();
+  if (kind === "home") { ctx.moveTo(-8, 0); ctx.lineTo(0, -8); ctx.lineTo(8, 0); ctx.moveTo(-5.5, -1.5); ctx.lineTo(-5.5, 7); ctx.lineTo(5.5, 7); ctx.lineTo(5.5, -1.5); ctx.moveTo(-1.5, 7); ctx.lineTo(-1.5, 2.5); ctx.lineTo(1.5, 2.5); ctx.lineTo(1.5, 7); }
+  else if (kind === "school") { ctx.moveTo(-9, -2); ctx.lineTo(0, -6.5); ctx.lineTo(9, -2); ctx.lineTo(0, 2.5); ctx.closePath(); ctx.moveTo(-5, 0.5); ctx.lineTo(-5, 5); ctx.quadraticCurveTo(0, 8.5, 5, 5); ctx.lineTo(5, 0.5); ctx.moveTo(9, -2); ctx.lineTo(9, 4); }
+  else { ctx.rect(-8, -3, 16, 10.5); ctx.moveTo(-3, -3); ctx.lineTo(-3, -6.5); ctx.lineTo(3, -6.5); ctx.lineTo(3, -3); ctx.moveTo(-8, 1.5); ctx.lineTo(8, 1.5); }
+  ctx.stroke(); ctx.restore();
+}
+
+function drawHud(t) {
+  const sk = SKINS[S.skin], c = sk.c, { w, h } = S.size, dpr = hudC.width / w;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, w, h);
+  ctx.fillStyle = c.tint; ctx.fillRect(0, 0, w, h);
+  if (!S.tilesOk) { // no street tiles yet: draw a faint reference grid so the radar still reads
+    ctx.strokeStyle = c.faint; ctx.lineWidth = 1; ctx.beginPath();
+    for (let x = (w / 2) % 32; x < w; x += 32) { ctx.moveTo(x, 0); ctx.lineTo(x, h); }
+    for (let y = (h / 2) % 32; y < h; y += 32) { ctx.moveTo(0, y); ctx.lineTo(w, y); }
+    ctx.stroke();
+  }
+  const me = toScreen(S.me), ppm = Math.cos(S.view.lat * RAD) / Math.cos(S.me.lat * RAD) / S.view.mpp, R = RANGE * ppm;
+
+  // range rings, one per mile
+  for (let i = 1; i <= 5; i++) {
+    ctx.beginPath(); ctx.arc(me.x, me.y, i * MI * ppm, 0, TAU);
+    ctx.strokeStyle = i === 5 ? c.ring : c.faint; ctx.lineWidth = i === 5 ? 2 : 1;
+    ctx.setLineDash(S.skin === "parchment" ? [6, 5] : S.skin === "pixel" ? [4, 4] : []);
+    ctx.stroke();
+  }
+  ctx.setLineDash([]);
+  if (R > 90) for (const i of [1, 3, 5]) label(i + " mi", me.x + 4, me.y - i * MI * ppm + (i === 5 && !S.expanded ? 6 : 3), c.rl || c.ring, "left");
+
+  // crosshair + bearing ticks
+  if (S.skin !== "parchment") {
+    ctx.strokeStyle = c.faint; ctx.lineWidth = 1; ctx.beginPath();
+    ctx.moveTo(me.x - R, me.y); ctx.lineTo(me.x + R, me.y); ctx.moveTo(me.x, me.y - R); ctx.lineTo(me.x, me.y + R); ctx.stroke();
+  }
+  if (S.skin === "tactical") {
+    ctx.strokeStyle = c.ring; ctx.beginPath();
+    for (let d = 0; d < 360; d += 10) { const a = (d - 90) * RAD, r0 = R - (d % 30 ? 5 : 10); ctx.moveTo(me.x + Math.cos(a) * r0, me.y + Math.sin(a) * r0); ctx.lineTo(me.x + Math.cos(a) * R, me.y + Math.sin(a) * R); }
+    ctx.stroke();
+  }
+  // north marker
+  if (S.skin === "parchment") {
+    const nx = me.x, ny = me.y - R + 26;
+    ctx.fillStyle = c.me; ctx.beginPath(); ctx.moveTo(nx, ny - 14); ctx.lineTo(nx + 5, ny); ctx.lineTo(nx, ny - 3); ctx.lineTo(nx - 5, ny); ctx.closePath(); ctx.fill();
+    label("N", nx, ny + 2, c.text);
+  } else label("N", me.x, me.y - R + 20, c.rl || c.ring);
+
+  // sweep
+  let sweep = null;
+  if (!REDUCED && (S.skin === "sonar" || S.skin === "tactical")) {
+    sweep = (t / (S.skin === "sonar" ? 4000 : 9000) * TAU) % TAU;
+    const steps = S.skin === "sonar" ? 36 : 10, span = S.skin === "sonar" ? 1.1 : 0.25;
+    for (let i = 0; i < steps; i++) {
+      ctx.beginPath(); ctx.moveTo(me.x, me.y); ctx.arc(me.x, me.y, R, sweep - span * (i + 1) / steps, sweep - span * i / steps); ctx.closePath();
+      ctx.fillStyle = c.friend; ctx.globalAlpha = 0.22 * (1 - i / steps); ctx.fill();
+    }
+    ctx.globalAlpha = 1; ctx.strokeStyle = c.ring; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(me.x, me.y); ctx.lineTo(me.x + Math.cos(sweep) * R, me.y + Math.sin(sweep) * R); ctx.stroke();
+  }
+  const pulse = REDUCED ? 0.5 : (t % 1800) / 1800, blink = REDUCED || Math.floor(t / 450) % 2 === 0;
+  const hits = [], isSel = (type, id) => S.sel && S.sel.type === type && S.sel.id === id;
+  const selRing = (x, y) => { ctx.strokeStyle = c.text; ctx.lineWidth = 2; shape(MARK[S.skin], x, y, 15); ctx.stroke(); };
+
+  // places (only you see these)
+  for (const kind of ["home", "school", "work"]) {
+    const p = S.places[kind]; if (!p) continue;
+    const s = toScreen(p), far = dist(S.me, p) > RANGE;
+    if (far && !S.expanded) continue;
+    ctx.fillStyle = c.halo; shape(S.skin === "pixel" || S.skin === "tactical" ? "square" : "circle", s.x, s.y, 13); ctx.fill();
+    ctx.strokeStyle = c.place; ctx.lineWidth = 1.5; ctx.stroke();
+    glyph(kind, s.x, s.y, c.place);
+    label(kind, s.x, s.y + 15, c.place);
+    if (isSel("place", kind)) selRing(s.x, s.y);
+    hits.push({ type: "place", id: kind, x: s.x, y: s.y });
+  }
+
+  // waypoints
+  for (const wpt of S.waypoints) {
+    const s = toScreen(wpt), far = dist(S.me, wpt) > RANGE;
+    if (far && !S.expanded) continue;
+    ctx.strokeStyle = c.way; ctx.lineWidth = 2; ctx.globalAlpha = 1 - pulse;
+    shape(MARK[S.skin], s.x, s.y, 6 + pulse * 16); ctx.stroke(); ctx.globalAlpha = 1;
+    ctx.beginPath(); ctx.moveTo(s.x, s.y + 2); ctx.lineTo(s.x, s.y - 16); ctx.lineWidth = 2.5; ctx.strokeStyle = c.halo; ctx.stroke(); ctx.lineWidth = 1.5; ctx.strokeStyle = c.way; ctx.stroke();
+    ctx.fillStyle = c.way; ctx.beginPath(); ctx.moveTo(s.x, s.y - 16); ctx.lineTo(s.x + 11, s.y - 11.5); ctx.lineTo(s.x, s.y - 7); ctx.closePath(); ctx.fill();
+    label(wpt.title + (wpt.joiners.length ? " +" + wpt.joiners.length : ""), s.x, s.y + 6, c.way);
+    if (isSel("waypoint", wpt.id)) selRing(s.x, s.y - 4);
+    hits.push({ type: "waypoint", id: wpt.id, x: s.x, y: s.y - 6 });
+  }
+
+  // friends
+  for (const f of S.friends) {
+    if (f.lat == null) continue;
+    const d = dist(S.me, f), s = toScreen(f), stale = Date.now() - f.updatedAt > 15 * 60e3, ang = Math.atan2(s.y - me.y, s.x - me.x);
+    if (d > RANGE && !S.expanded) { // out of range: arrow on the rim
+      const ex = me.x + Math.cos(ang) * (R - 12), ey = me.y + Math.sin(ang) * (R - 12);
+      ctx.save(); ctx.translate(ex, ey); ctx.rotate(ang); ctx.fillStyle = c.friend; ctx.globalAlpha = 0.75;
+      ctx.beginPath(); ctx.moveTo(8, 0); ctx.lineTo(-4, -6); ctx.lineTo(-4, 6); ctx.closePath(); ctx.fill(); ctx.restore();
+      hits.push({ type: "friend", id: f.id, x: ex, y: ey });
+      continue;
+    }
+    let a = stale ? 0.45 : 1;
+    if (sweep != null && S.skin === "sonar") { const diff = ((sweep - ang) % TAU + TAU) % TAU; a *= 0.45 + 0.55 * Math.exp(-diff * 1.1); }
+    if (S.skin === "pixel" && !blink && !stale) a *= 0.8;
+    ctx.globalAlpha = a;
+    if (S.skin === "sonar") { ctx.shadowColor = c.friend; ctx.shadowBlur = 12; }
+    ctx.fillStyle = c.friend; shape(MARK[S.skin], s.x, s.y, 6); ctx.fill(); ctx.shadowBlur = 0;
+    ctx.strokeStyle = c.halo; ctx.lineWidth = S.skin === "pixel" ? 3 : 1.5; ctx.stroke();
+    ctx.globalAlpha = 1;
+    label(S.skin === "tactical" ? f.name + " " + fmtDist(d) : f.name, s.x, s.y + 9, c.text);
+    if (isSel("friend", f.id)) selRing(s.x, s.y);
+    hits.push({ type: "friend", id: f.id, x: s.x, y: s.y });
+  }
+
+  // you
+  ctx.fillStyle = c.me; ctx.strokeStyle = c.halo; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(me.x, me.y - 10); ctx.lineTo(me.x + 7, me.y + 7); ctx.lineTo(me.x, me.y + 3); ctx.lineTo(me.x - 7, me.y + 7); ctx.closePath(); ctx.stroke(); ctx.fill();
+
+  if (S.placing) { ctx.fillStyle = c.way; ctx.globalAlpha = 0.08 + 0.06 * Math.sin(t / 300); ctx.fillRect(0, 0, w, h); ctx.globalAlpha = 1; }
+  S.hits = hits;
+}
+
+let lastFrame = 0;
+function frame(t) {
+  requestAnimationFrame(frame);
+  if (REDUCED && t - lastFrame < 500) return;
+  lastFrame = t;
+  if (S.follow || !S.expanded) {
+    if (S.view.lat !== S.me.lat || S.view.lng !== S.me.lng) { S.view.lat = S.me.lat; S.view.lng = S.me.lng; mapDirty = true; }
+  }
+  if (mapDirty) drawMap();
+  drawHud(t);
+}
+
+/* ---------- pointer input: tap, drag to pan, pinch / wheel to zoom (expanded only) ---------- */
+const ptrs = new Map(); let gest = null;
+hudC.addEventListener("pointerdown", e => {
+  ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (ptrs.size === 1) gest = { sx: e.clientX, sy: e.clientY, moved: false, v: { ...S.view } };
+  else if (ptrs.size === 2) { const [a, b] = [...ptrs.values()]; gest = { pinch: Math.hypot(a.x - b.x, a.y - b.y), mpp: S.view.mpp, moved: true }; }
+  if (S.expanded) { try { hudC.setPointerCapture(e.pointerId); } catch (err) {} }
+});
+hudC.addEventListener("pointermove", e => {
+  if (!gest || !ptrs.has(e.pointerId)) return;
+  ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (gest.pinch && ptrs.size === 2) {
+    if (!S.expanded) return;
+    const [a, b] = [...ptrs.values()];
+    S.view.mpp = clamp(gest.mpp * gest.pinch / Math.max(10, Math.hypot(a.x - b.x, a.y - b.y)), 0.6, 600); mapDirty = true;
+  } else if (!gest.pinch) {
+    const dx = e.clientX - gest.sx, dy = e.clientY - gest.sy;
+    if (Math.hypot(dx, dy) > 8) gest.moved = true;
+    if (gest.moved && S.expanded) {
+      const W = worldW(gest.v);
+      S.follow = false; S.view.lng = (mx(gest.v.lng) - dx / W) * 360 - 180; S.view.lat = clamp(latFromMy(my(gest.v.lat) - dy / W), -84, 84); mapDirty = true;
+    }
+  }
+});
+function endPtr(e, cancelled) {
+  if (!ptrs.has(e.pointerId)) return;
+  ptrs.delete(e.pointerId);
+  if (ptrs.size === 0) {
+    if (gest && !gest.moved && !cancelled) { const r = hudC.getBoundingClientRect(); tap(e.clientX - r.left, e.clientY - r.top); }
+    gest = null;
+  }
+}
+hudC.addEventListener("pointerup", e => endPtr(e, false));
+hudC.addEventListener("pointercancel", e => endPtr(e, true));
+hudC.addEventListener("wheel", e => { if (!S.expanded) return; e.preventDefault(); S.view.mpp = clamp(S.view.mpp * Math.exp(e.deltaY * 0.0015), 0.6, 600); mapDirty = true; }, { passive: false });
+
+function tap(x, y) {
+  if (S.placing) {
+    const p = toLatLng(x, y), kind = S.placing;
+    if (!S.expanded && Math.hypot(x - S.size.w / 2, y - S.size.h / 2) > Math.min(S.size.w, S.size.h) / 2) return;
+    setPlacing(null);
+    if (kind === "waypoint") { S.pendingSpot = p; $("wpTitle").value = ""; $("wpDialog").showModal(); }
+    else act(() => api.setPlace(kind, p), kind[0].toUpperCase() + kind.slice(1) + " set.");
+    return;
+  }
+  let best = null, bd = 26;
+  for (const hit of S.hits) { const d = Math.hypot(hit.x - x, hit.y - y); if (d < bd) { bd = d; best = hit; } }
+  S.sel = best ? { type: best.type, id: best.id } : null;
+  renderCard();
+}
+function setPlacing(kind) {
+  S.placing = kind;
+  $("banner").hidden = !kind;
+  if (kind) $("bannerText").textContent = kind === "waypoint" ? "Tap the map where you want friends to meet you." : "Tap the map to mark " + kind + ".";
+}
+
+/* =====================================================================
+   UI: card, tabs, lists
+   ===================================================================== */
+function renderCard() {
+  const card = $("card"), s = S.sel;
+  card.replaceChildren();
+  if (!s) { card.hidden = true; return; }
+  let kids = null;
+  if (s.type === "friend") {
+    const f = S.friends.find(f => f.id === s.id);
+    if (f && f.lat != null) {
+      const d = dist(S.me, f);
+      kids = [h("h2", {}, f.name),
+        h("div", { class: "meta" }, fmtDist(d) + " " + compass(bearing(S.me, f)) + " of you" + (d > RANGE ? ", outside your 5 mile radar" : "") + " · seen " + ago(f.updatedAt))];
+    }
+  } else if (s.type === "waypoint") {
+    const wpt = S.waypoints.find(x => x.id === s.id);
+    if (wpt) kids = [h("h2", {}, wpt.title),
+      h("div", { class: "meta" }, wpt.kind + " · posted by " + wpt.ownerName + " · " + fmtDist(dist(S.me, wpt)) + " " + compass(bearing(S.me, wpt)) + " · " + until(wpt.expiresAt)),
+      h("div", {}, wpt.joiners.length ? "Going: " + wpt.joiners.join(", ") : "Nobody has joined yet."),
+      h("div", { class: "row" }, wpt.mine
+        ? h("button", { type: "button", on: { click: () => { S.sel = null; act(() => api.deleteWaypoint(wpt.id), "Waypoint removed."); } } }, "Remove waypoint")
+        : h("button", { type: "button", class: wpt.joined ? "" : "primary", on: { click: () => act(() => api.joinWaypoint(wpt.id, !wpt.joined)) } }, wpt.joined ? "Leave" : "I'm in"))];
+  } else if (s.type === "place" && S.places[s.id]) {
+    kids = [h("h2", {}, s.id), h("div", { class: "meta" }, fmtDist(dist(S.me, S.places[s.id])) + " " + compass(bearing(S.me, S.places[s.id])) + " of you · only you can see this")];
+  }
+  if (!kids) { S.sel = null; card.hidden = true; return; }
+  card.append(...kids); card.hidden = false;
+}
+
+const panelBusy = () => { const a = document.activeElement; return a && $("panel").contains(a) && a.tagName === "INPUT"; };
+function select(type, id) { S.sel = { type, id }; renderCard(); $("stage").scrollIntoView({ block: "nearest", behavior: REDUCED ? "auto" : "smooth" }); }
+
+function renderPanel() {
+  const p = $("panel"); p.replaceChildren();
+  for (const b of $("tabs").children) b.setAttribute("aria-selected", String(b.dataset.tab === S.tab));
+  if (S.tab === "friends") {
+    const code = S.profile ? S.profile.code : "";
+    p.append(
+      h("div", { class: "item" }, h("div", { class: "grow" }, h("div", { class: "meta" }, "Your friend code"), h("code", { class: "code" }, code)),
+        h("button", { type: "button", on: { click: () => { try { navigator.clipboard.writeText(code).then(() => toast("Code copied."), () => toast("Copy blocked. Your code is " + code)); } catch (e) { toast("Your code is " + code); } } } }, "Copy")),
+      h("form", { class: "row", on: { submit: e => { e.preventDefault(); const v = $("addCode").value.trim(); if (v) { $("addCode").value = ""; $("addCode").blur(); act(() => api.addFriend(v)); } } } },
+        h("input", { id: "addCode", class: "grow", placeholder: "Enter a friend's code", maxLength: 12, autocapitalize: "characters", autocomplete: "off", "aria-label": "Friend code" }),
+        h("button", { type: "submit", class: "primary" }, "Add friend")));
+    if (S.incoming.length) p.append(h("h3", {}, "Requests"), ...S.incoming.map(f => h("div", { class: "item" }, h("span", { class: "name grow" }, f.name),
+      h("button", { type: "button", class: "primary", on: { click: () => act(() => api.acceptFriend(f.id), f.name + " added.") } }, "Accept"),
+      h("button", { type: "button", on: { click: () => act(() => api.removeFriend(f.id)) } }, "Decline"))));
+    if (S.outgoing.length) p.append(h("h3", {}, "Sent"), ...S.outgoing.map(f => h("div", { class: "item" }, h("span", { class: "name grow" }, f.name), h("span", { class: "meta" }, "Waiting"))));
+    p.append(h("h3", {}, "Friends" + (LIVE ? "" : " (sample data)")));
+    if (!S.friends.length) p.append(h("div", { class: "meta" }, "No friends yet. Share your code or enter theirs."));
+    const sorted = S.friends.slice().sort((a, b) => (a.lat == null) - (b.lat == null) || dist(S.me, a) - dist(S.me, b));
+    for (const f of sorted) {
+      const has = f.lat != null, d = has ? dist(S.me, f) : 0;
+      p.append(h("div", { class: "item" }, h("span", { class: "dot" + (has && d <= RANGE ? "" : " off") }),
+        h("div", { class: "grow" }, h("div", { class: "name" }, f.name), h("div", { class: "meta" }, has ? fmtDist(d) + " " + compass(bearing(S.me, f)) + (d > RANGE ? " · off radar" : "") + " · " + ago(f.updatedAt) : "Not sharing location")),
+        has ? h("button", { type: "button", on: { click: () => select("friend", f.id) } }, "Show") : null,
+        h("button", { type: "button", "aria-label": "Remove " + f.name, on: { click: () => act(() => api.removeFriend(f.id), f.name + " removed.") } }, "Remove")));
+    }
+    if (LIVE) p.append(h("button", { type: "button", on: { click: async () => { await api.signOut(); location.reload(); } } }, "Sign out"));
+  } else if (S.tab === "waypoints") {
+    p.append(h("div", { class: "meta" }, "Drop a waypoint when you want company. Friends see it on their radar and can join."));
+    if (!S.waypoints.length) p.append(h("div", { class: "item" }, "No waypoints right now."));
+    for (const wpt of S.waypoints) p.append(h("div", { class: "item" },
+      h("div", { class: "grow" }, h("div", { class: "name" }, wpt.title), h("div", { class: "meta" }, wpt.kind + " · " + wpt.ownerName + " · " + fmtDist(dist(S.me, wpt)) + " · " + until(wpt.expiresAt) + (wpt.joiners.length ? " · " + wpt.joiners.length + " going" : ""))),
+      h("button", { type: "button", on: { click: () => select("waypoint", wpt.id) } }, "Show")));
+  } else {
+    p.append(h("div", { class: "meta" }, "Home, school and work show only on your own radar."));
+    for (const kind of ["home", "school", "work"]) {
+      const pl = S.places[kind];
+      p.append(h("div", { class: "item" },
+        h("div", { class: "grow" }, h("div", { class: "name", style: "text-transform:capitalize" }, kind), h("div", { class: "meta" }, pl ? fmtDist(dist(S.me, pl)) + " " + compass(bearing(S.me, pl)) + " of you" : "Not set")),
+        h("button", { type: "button", on: { click: () => { setPlacing(kind); $("stage").scrollIntoView({ block: "nearest" }); } } }, "Pick on map"),
+        h("button", { type: "button", on: { click: () => act(() => api.setPlace(kind, S.me), "Marked where you are now.") } }, "I'm here"),
+        pl ? h("button", { type: "button", on: { click: () => act(() => api.setPlace(kind, null)) } }, "Clear") : null));
+    }
+  }
+}
+
+function setSkin(name) {
+  S.skin = name; store.set("fr-skin", name); document.body.dataset.skin = name;
+  for (const b of $("skins").children) b.setAttribute("aria-checked", String(b.dataset.skin === name));
+  resize();
+}
+function setExpanded(on) {
+  S.expanded = on; document.body.classList.toggle("expanded", on);
+  $("expand").textContent = on ? "Close map" : "Expand map";
+  $("recenter").hidden = !on; $("skinCycle").hidden = !on;
+  S.follow = true; resize(); fitRange();
+}
+function setGhost(on) {
+  S.ghost = on; store.set("fr-ghost", on);
+  const b = $("ghost"); b.setAttribute("aria-pressed", String(on)); b.textContent = on ? "Hidden" : "Sharing on";
+}
+
+/* ---------- location ---------- */
+let lastPush = { t: 0, p: null };
+function onPosition(pos) {
+  const p = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+  const first = !S.me.real;
+  S.me = { ...p, real: true };
+  if (first) { mapDirty = true; const lc = $("locChip"); lc.textContent = "GPS on"; lc.classList.add("live"); refresh(); }
+  if (!S.ghost && (!lastPush.p || dist(lastPush.p, p) > 25 || Date.now() - lastPush.t > 30000)) {
+    lastPush = { t: Date.now(), p };
+    api.pushLocation(p).catch(() => {});
+  }
+}
+function startLocation() {
+  if (!navigator.geolocation) return;
+  navigator.geolocation.watchPosition(onPosition, () => {}, { enableHighAccuracy: true, maximumAge: 10000, timeout: 20000 });
+}
+
+/* ---------- wiring ---------- */
+for (const name in SKINS) $("skins").append(h("button", { type: "button", role: "radio", "data-skin": name, on: { click: () => setSkin(name) } }, SKINS[name].label));
+for (const b of $("tabs").children) b.addEventListener("click", () => { S.tab = b.dataset.tab; renderPanel(); });
+$("expand").addEventListener("click", () => setExpanded(!S.expanded));
+$("recenter").addEventListener("click", () => { S.follow = true; fitRange(); mapDirty = true; });
+$("skinCycle").addEventListener("click", () => { const k = Object.keys(SKINS); setSkin(k[(k.indexOf(S.skin) + 1) % k.length]); });
+$("drop").addEventListener("click", () => setPlacing(S.placing === "waypoint" ? null : "waypoint"));
+$("cancelPlace").addEventListener("click", () => setPlacing(null));
+$("ghost").addEventListener("click", () => { setGhost(!S.ghost); act(() => api.setSharing(!S.ghost), S.ghost ? "Friends can no longer see you." : "Sharing your location with friends."); if (!S.ghost) lastPush = { t: 0, p: null }; });
+$("wpCancel").addEventListener("click", () => $("wpDialog").close());
+$("wpForm").addEventListener("submit", e => {
+  e.preventDefault();
+  const title = $("wpTitle").value.trim(); if (!title || !S.pendingSpot) return;
+  const w = { title, kind: $("wpKind").value, lat: S.pendingSpot.lat, lng: S.pendingSpot.lng, expiresAt: Date.now() + Number($("wpHours").value) * 3600e3 };
+  $("wpDialog").close(); S.tab = "waypoints";
+  act(() => api.addWaypoint(w), "Waypoint posted to your friends.");
+});
+document.addEventListener("keydown", e => { if (e.key === "Escape") { if (S.placing) setPlacing(null); else if (S.expanded && !$("wpDialog").open) setExpanded(false); } });
+new ResizeObserver(() => { resize(); if (S.follow || !S.expanded) fitRange(); }).observe(stage);
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { mapDirty = true; });
+
+/* ---------- auth (live mode only) ---------- */
+let signingUp = false;
+$("authSwap").addEventListener("click", () => {
+  signingUp = !signingUp; $("authNameWrap").hidden = !signingUp;
+  $("authGo").textContent = signingUp ? "Create account" : "Sign in";
+  $("authSwap").textContent = signingUp ? "Have an account? Sign in" : "New here? Create an account";
+});
+$("authForm").addEventListener("submit", async e => {
+  e.preventDefault(); $("authMsg").textContent = "";
+  try {
+    if (signingUp) {
+      const done = await api.signUp($("authEmail").value, $("authPass").value, $("authName").value.trim() || "Player");
+      if (!done) { $("authMsg").textContent = "Check your email to confirm your account, then sign in."; return; }
+    } else await api.signIn($("authEmail").value, $("authPass").value);
+    $("auth").hidden = true; begin();
+  } catch (err) { $("authMsg").textContent = err.message; }
+});
+
+function begin() {
+  startLocation(); refresh();
+  setInterval(refresh, LIVE ? 8000 : 3000);
+}
+(async function main() {
+  setSkin(S.skin); setGhost(S.ghost); fitRange(); renderPanel();
+  const chip = $("mode"); chip.textContent = LIVE ? "Live" : "Demo"; chip.classList.toggle("live", LIVE);
+  requestAnimationFrame(frame);
+  try { if (await api.init()) begin(); else $("auth").hidden = false; }
+  catch (e) { toast(e.message); }
+})();
+</script>
+</body>
+</html>
