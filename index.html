@@ -86,9 +86,9 @@ body.expanded #card{position:fixed;left:10px;right:10px;bottom:34px;z-index:12}
 .grow{flex:1 1 140px;min-width:0}
 .meta{color:var(--dim);font-size:.88em}
 #skins,#tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
-#skins{grid-template-columns:repeat(auto-fill,minmax(96px,1fr))}
+#skins{display:flex;flex-direction:column;gap:4px}
+#skinSel{width:100%;min-height:44px;font-size:1.05em;text-transform:uppercase;letter-spacing:.04em;color:var(--ink)}
 #tabs{grid-template-columns:repeat(3,1fr)}
-#skins button{padding:6px 2px;font-size:.85em;text-transform:uppercase;letter-spacing:.03em}
 #panel{display:flex;flex-direction:column;gap:10px}
 .item{border:var(--edge) solid var(--line);border-radius:var(--radius);padding:8px 10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;background:var(--panel)}
 .item .name{font-weight:700;overflow-wrap:anywhere}
@@ -135,7 +135,7 @@ label input,label select{color:var(--ink);width:100%}
 
   <div id="card" hidden></div>
 
-  <div id="skins" role="radiogroup" aria-label="Overlay style"></div>
+  <label id="skins">Overlay style<select id="skinSel"></select></label>
   <nav id="tabs" role="tablist" aria-label="Lists">
     <button type="button" role="tab" data-tab="friends" id="tab-friends">Friends</button>
     <button type="button" role="tab" data-tab="waypoints" id="tab-waypoints">Waypoints</button>
@@ -752,7 +752,7 @@ function renderPanel() {
 
 function setSkin(name) {
   S.skin = name; store.set("fr-skin", name); document.body.dataset.skin = name;
-  for (const b of $("skins").children) b.setAttribute("aria-checked", String(b.dataset.skin === name));
+  $("skinSel").value = name;
   resize();
 }
 function setExpanded(on) {
@@ -784,7 +784,8 @@ function startLocation() {
 }
 
 /* ---------- wiring ---------- */
-for (const name in SKINS) $("skins").append(h("button", { type: "button", role: "radio", "data-skin": name, on: { click: () => setSkin(name) } }, SKINS[name].label));
+for (const name in SKINS) $("skinSel").append(h("option", { value: name }, SKINS[name].label));
+$("skinSel").addEventListener("change", e => setSkin(e.target.value));
 for (const b of $("tabs").children) b.addEventListener("click", () => { S.tab = b.dataset.tab; renderPanel(); });
 $("expand").addEventListener("click", () => setExpanded(!S.expanded));
 $("recenter").addEventListener("click", () => { S.follow = true; fitRange(); mapDirty = true; });
