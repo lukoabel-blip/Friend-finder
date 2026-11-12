@@ -1,6 +1,6 @@
 # Friend Radar
 
-A phone-first web app: a 2.5-mile radar centered on you, friends who have added each other, waypoints friends can join, permanent markers for homes, work, school and meetup spots, an expandable street map, and four game-style overlays (Sonar, Parchment, Tactical, Pixel).
+A phone-first web app: a 2.5-mile radar centered on you, friends who have added each other, waypoints friends can join, permanent markers for homes, work, school and meetup spots, an expandable street map, and eleven game-style overlays (Sonar, Parchment, Tactical, Pixel, City, Street, Festival, Runes, Wasteland, Holo, Cyber).
 
 Files
 - `index.html`: the whole app (no build step).
@@ -23,7 +23,7 @@ Supabase asks new accounts to confirm their email by default. You can turn that 
 - Location: the browser's GPS, sent to the `locations` table at most every 30 seconds or 25 meters. "Sharing on / Hidden" deletes your row so friends stop seeing you.
 - Friends: each account gets an 8-character code. Entering a code sends a request; the other person accepts. Only accepted friends can read each other's location and waypoints (enforced in the database, not just the app).
 - Waypoints: tap "Drop waypoint", tap the map, name it, pick how long it lasts. Friends can tap "I'm in".
-- Markers: permanent pins for homes, workplaces, schools and repeat meetup spots. Add as many as you like, name them, and they stay until removed. Private unless you share one with friends. "Meet here" on any marker starts a waypoint at that spot.
+- Markers: permanent pins for homes, workplaces, schools and repeat meetup spots. Add as many as you like, name them, and they stay until removed. Shared with friends by default; untick sharing or tap Stop sharing to keep one private. "Meet here" on any marker starts a waypoint at that spot.
 - Map: OpenStreetMap's standard tiles, recolored per overlay. The app polls for updates every 8 seconds.
 
 ## Known limits

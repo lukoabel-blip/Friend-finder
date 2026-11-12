@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Friend Radar</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=IM+Fell+English+SC&family=IM+Fell+English:ital@0;1&family=Press+Start+2P&family=Rajdhani:wght@500;600;700&family=Share+Tech+Mono&family=VT323&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=IM+Fell+English+SC&family=IM+Fell+English:ital@0;1&family=Press+Start+2P&family=Rajdhani:wght@500;600;700&family=Share+Tech+Mono&family=VT323&family=Oswald:wght@400;500;600&family=Exo+2:ital,wght@0,500;0,700;1,700;1,800&family=Barlow+Condensed:ital,wght@0,500;0,600;1,600;1,700&family=Cinzel:wght@500;600;700&family=Courier+Prime:wght@400;700&family=Orbitron:wght@500;700&family=Chakra+Petch:wght@500;600;700&display=swap" rel="stylesheet">
 <style>
 /* Layout: radar disc on top, overlay-style chips, tabbed drawer below.
    Expanded = full-bleed street map with floating controls. Each skin is its own visual world. */
@@ -20,6 +20,22 @@ body[data-skin="tactical"]{--bg:#0b0f14;--panel:#121a23;--line:#2e3f50;--ink:#d7
   --font-ui:"Rajdhani","Segoe UI",sans-serif;--font-display:"Rajdhani","Segoe UI",sans-serif;--fs:17px;--ds:23px;--radius:0;--edge:1px}
 body[data-skin="pixel"]{--bg:#1d1b3a;--panel:#2b2859;--line:#6a66c4;--ink:#fdf6e3;--dim:#b4b0dc;--accent:#ffcc00;--warn:#ff5d8f;
   --font-ui:"VT323",ui-monospace,monospace;--font-display:"Press Start 2P",ui-monospace,monospace;--fs:20px;--ds:14px;--radius:0;--edge:3px}
+
+body[data-skin="city"]{--bg:#15171a;--panel:#1f2226;--line:#3d434b;--ink:#f2f4f6;--dim:#9aa3ad;--accent:#5ec8ff;--warn:#ffd23f;
+  --font-ui:"Oswald","Arial Narrow",sans-serif;--font-display:"Oswald","Arial Narrow",sans-serif;--fs:16px;--ds:23px;--radius:6px;--edge:1px}
+body[data-skin="street"]{--bg:#090a1c;--panel:#131538;--line:#373b92;--ink:#eaf0ff;--dim:#9297d8;--accent:#ff2e88;--warn:#ffe600;
+  --font-ui:"Exo 2","Segoe UI",sans-serif;--font-display:"Exo 2","Segoe UI",sans-serif;--fs:15px;--ds:22px;--radius:3px;--edge:1px}
+body[data-skin="festival"]{--bg:#fff3d9;--panel:#ffffff;--line:#efb3d0;--ink:#1b1b3a;--dim:#6a5f7a;--accent:#e6177f;--warn:#e85d00;
+  --font-ui:"Barlow Condensed","Arial Narrow",sans-serif;--font-display:"Barlow Condensed","Arial Narrow",sans-serif;--fs:18px;--ds:27px;--radius:10px;--edge:2px;color-scheme:light}
+body[data-skin="runes"]{--bg:#1b2025;--panel:#262d34;--line:#5a656f;--ink:#efe2b8;--dim:#a89f80;--accent:#d9a441;--warn:#d9a441;
+  --font-ui:"Cinzel",Georgia,serif;--font-display:"Cinzel",Georgia,serif;--fs:14px;--ds:21px;--radius:1px;--edge:1px}
+body[data-skin="wasteland"]{--bg:#130c02;--panel:#1f1503;--line:#7a4f0c;--ink:#ffc864;--dim:#bb8c3c;--accent:#ffb642;--warn:#ffb642;
+  --font-ui:"Courier Prime","Courier New",monospace;--font-display:"Courier Prime","Courier New",monospace;--fs:15px;--ds:21px;--radius:10px;--edge:2px}
+body[data-skin="holo"]{--bg:#030b17;--panel:#071a2e;--line:#1f6494;--ink:#cfefff;--dim:#72acce;--accent:#6fe3ff;--warn:#ffb347;
+  --font-ui:"Exo 2","Segoe UI",sans-serif;--font-display:"Orbitron","Segoe UI",sans-serif;--fs:15px;--ds:17px;--radius:2px;--edge:1px}
+body[data-skin="cyber"]{--bg:#0d0214;--panel:#1a0628;--line:#7a1fa3;--ink:#f6e9ff;--dim:#b890d2;--accent:#fcee0a;--warn:#ff2bd6;
+  --font-ui:"Chakra Petch","Segoe UI",sans-serif;--font-display:"Chakra Petch","Segoe UI",sans-serif;--fs:16px;--ds:22px;--radius:0;--edge:1px}
+body[data-skin="street"] h1,body[data-skin="festival"] h1{font-style:italic;font-weight:800}
 
 *{box-sizing:border-box}
 html,body{height:100%;margin:0}
@@ -40,6 +56,12 @@ button[aria-pressed="true"],button[aria-checked="true"],button[aria-selected="tr
   border:calc(var(--edge) + 1px) solid var(--line);box-shadow:0 0 0 4px var(--bg),0 0 0 5px var(--line)}
 body[data-skin="sonar"] #stage{box-shadow:0 0 28px rgba(57,255,136,.25),inset 0 0 40px rgba(0,0,0,.6)}
 body[data-skin="pixel"] #stage{border-radius:0;box-shadow:6px 6px 0 #0d0c20}
+body[data-skin="city"] #stage{border-radius:18px;box-shadow:0 0 0 4px #000}
+body[data-skin="wasteland"] #stage{border-radius:22px;box-shadow:0 0 30px rgba(255,182,66,.25),inset 0 0 50px rgba(0,0,0,.7)}
+body[data-skin="street"] #stage{box-shadow:0 0 0 3px #090a1c,0 0 0 5px #ff2e88,0 0 26px rgba(255,46,136,.45)}
+body[data-skin="holo"] #stage{box-shadow:0 0 30px rgba(111,227,255,.3)}
+body[data-skin="cyber"] #stage{box-shadow:0 0 0 3px #0d0214,0 0 0 5px #fcee0a,0 0 24px rgba(255,43,214,.5)}
+body.expanded #stage{box-shadow:none !important;border-radius:0 !important}
 #stage canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
 #map{image-rendering:auto}
 body[data-skin="pixel"] #map{image-rendering:pixelated}
@@ -64,6 +86,7 @@ body.expanded #card{position:fixed;left:10px;right:10px;bottom:34px;z-index:12}
 .grow{flex:1 1 140px;min-width:0}
 .meta{color:var(--dim);font-size:.88em}
 #skins,#tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+#skins{grid-template-columns:repeat(auto-fill,minmax(96px,1fr))}
 #tabs{grid-template-columns:repeat(3,1fr)}
 #skins button{padding:6px 2px;font-size:.85em;text-transform:uppercase;letter-spacing:.03em}
 #panel{display:flex;flex-direction:column;gap:10px}
@@ -106,6 +129,7 @@ label input,label select{color:var(--ink);width:100%}
     <button id="expand" type="button">Expand map</button>
     <button id="recenter" type="button" hidden>Recenter</button>
     <button id="drop" type="button" class="primary">Drop waypoint</button>
+    <button id="addMk" type="button">Add marker</button>
     <button id="skinCycle" type="button" hidden>Style</button>
   </div>
 
@@ -168,18 +192,39 @@ const LIVE = !!(CONFIG.SUPABASE_URL && CONFIG.SUPABASE_ANON_KEY);
 const REDUCED = matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 const SKINS = {
-  sonar:    { label: "Sonar",     tiles: "osm", filter: "invert(1) grayscale(1) brightness(.8) contrast(1.3) sepia(1) hue-rotate(75deg) saturate(3)", px: 1, upper: true,
+  sonar:    { label: "Sonar",     tiles: "osm", filter: "invert(1) grayscale(1) brightness(.8) contrast(1.3) sepia(1) hue-rotate(75deg) saturate(3)", px: 1, upper: true, mark: "circle", sweep: { ms: 4000, span: 1.1, steps: 36 }, fade: true, glow: true,
               font: '"Share Tech Mono",monospace', size: 12, land: "#f2efe9",
               c: { ring: "rgba(57,255,136,.6)", faint: "rgba(57,255,136,.22)", text: "#c8ffe0", halo: "rgba(0,12,5,.85)", me: "#f2fff7", friend: "#39ff88", way: "#ffd166", place: "#7fe9ff", tint: "rgba(0,50,22,.25)" } },
-  parchment:{ label: "Parchment", tiles: "osm", filter: "sepia(.95) saturate(.75) contrast(.9) brightness(1.02)", px: 1, upper: false,
+  parchment:{ label: "Parchment", tiles: "osm", filter: "sepia(.95) saturate(.75) contrast(.9) brightness(1.02)", px: 1, upper: false, mark: "circle", dash: [6, 5], cross: false, rose: true,
               font: '"IM Fell English SC",Georgia,serif', size: 14, land: "#f2efe9",
               c: { ring: "rgba(74,50,20,.7)", faint: "rgba(74,50,20,.28)", text: "#2e1f0c", halo: "rgba(243,231,198,.9)", me: "#8c2f1b", friend: "#1f4b3a", way: "#8c2f1b", place: "#3b2a14", tint: "rgba(196,160,92,.18)" } },
-  tactical: { label: "Tactical",  tiles: "osm", filter: "invert(1) grayscale(1) brightness(.85) contrast(1.25)", px: 1, upper: true,
+  tactical: { label: "Tactical",  tiles: "osm", filter: "invert(1) grayscale(1) brightness(.85) contrast(1.25)", px: 1, upper: true, mark: "diamond", badge: "square", ticks: true, dist: true, sweep: { ms: 9000, span: 0.25, steps: 10 },
               font: '600 13px "Rajdhani",sans-serif', size: 13, land: "#f2efe9",
               c: { ring: "rgba(120,200,255,.6)", faint: "rgba(120,200,255,.2)", text: "#e3eef8", halo: "rgba(6,10,14,.85)", me: "#ffb000", friend: "#5fd0ff", way: "#ffb000", place: "#b8c7d6", tint: "rgba(10,30,50,.2)" } },
-  pixel:    { label: "Pixel",     tiles: "osm", filter: "saturate(1.7) contrast(1.15)", px: 4, upper: true,
+  pixel:    { label: "Pixel",     tiles: "osm", filter: "saturate(1.7) contrast(1.15)", px: 4, upper: true, mark: "square", badge: "square", dash: [4, 4], halo: 4, blink: true, square: true,
               font: '"VT323",monospace', size: 17, land: "#f2efe9",
-              c: { ring: "rgba(29,27,58,.85)", rl: "#fdf6e3", faint: "rgba(29,27,58,.35)", text: "#fdf6e3", halo: "#1d1b3a", me: "#ff5d8f", friend: "#ffcc00", way: "#ff5d8f", place: "#ffffff", tint: "rgba(0,0,0,0)" } }
+              c: { ring: "rgba(29,27,58,.85)", rl: "#fdf6e3", faint: "rgba(29,27,58,.35)", text: "#fdf6e3", halo: "#1d1b3a", me: "#ff5d8f", friend: "#ffcc00", way: "#ff5d8f", place: "#ffffff", tint: "rgba(0,0,0,0)" } },
+  city:     { label: "City", tiles: "osm", filter: "invert(1) grayscale(1) brightness(.72) contrast(1.1)", px: 1, upper: true, mark: "circle", cross: false, square: true,
+              font: '500 13px "Oswald",sans-serif', land: "#f2efe9",
+              c: { ring: "rgba(255,255,255,.55)", faint: "rgba(255,255,255,.14)", text: "#ffffff", halo: "rgba(0,0,0,.85)", me: "#ffffff", friend: "#5ec8ff", way: "#ffd23f", place: "#9be38a", tint: "rgba(0,0,0,.08)" } },
+  street:   { label: "Street", tiles: "osm", filter: "invert(1) grayscale(1) brightness(.75) contrast(1.3) sepia(1) hue-rotate(200deg) saturate(2.4)", px: 1, upper: true, mark: "tri", cross: false, glow: true, dist: true,
+              font: 'italic 700 13px "Exo 2",sans-serif', land: "#f2efe9",
+              c: { ring: "rgba(255,46,136,.75)", faint: "rgba(120,130,255,.22)", text: "#ffffff", halo: "rgba(5,6,24,.9)", me: "#ffe600", friend: "#22e6ff", way: "#ff2e88", place: "#c8ccff", tint: "rgba(20,10,60,.2)" } },
+  festival: { label: "Festival", tiles: "osm", filter: "saturate(1.55) contrast(1.05) brightness(1.03)", px: 1, upper: true, mark: "tri", cross: false, dist: true,
+              font: 'italic 700 15px "Barlow Condensed",sans-serif', land: "#f2efe9",
+              c: { ring: "rgba(230,23,127,.8)", faint: "rgba(27,27,58,.22)", text: "#1b1b3a", halo: "rgba(255,255,255,.95)", me: "#1b1b3a", friend: "#e6177f", way: "#e85d00", place: "#0a7d6e", tint: "rgba(255,220,120,.1)" } },
+  runes:    { label: "Runes", tiles: "osm", filter: "invert(1) grayscale(1) brightness(.9) contrast(.9) sepia(.45) hue-rotate(170deg)", px: 1, upper: true, mark: "diamond", dash: [2, 5], cross: false, rose: true,
+              font: '600 12px "Cinzel",serif', land: "#f2efe9",
+              c: { ring: "rgba(239,226,184,.7)", faint: "rgba(239,226,184,.22)", text: "#f4e8c2", halo: "rgba(16,20,24,.9)", me: "#ffffff", friend: "#9fe0d0", way: "#ffb84a", place: "#d9a441", tint: "rgba(30,40,50,.2)" } },
+  wasteland:{ label: "Wasteland", tiles: "osm", filter: "invert(1) grayscale(1) brightness(.8) contrast(1.4) sepia(1) saturate(4) hue-rotate(-12deg)", px: 1, upper: true, mark: "square", badge: "square", scan: true, glow: true, blink: true, square: true,
+              font: '700 13px "Courier Prime",monospace', land: "#f2efe9",
+              c: { ring: "rgba(255,182,66,.7)", faint: "rgba(255,182,66,.22)", text: "#ffd58a", halo: "rgba(20,12,0,.9)", me: "#fff3d6", friend: "#ffb642", way: "#ffe9a8", place: "#ffb642", tint: "rgba(60,30,0,.25)" } },
+  holo:     { label: "Holo", tiles: "osm", filter: "invert(1) grayscale(1) brightness(.85) contrast(1.2) sepia(1) hue-rotate(165deg) saturate(3)", px: 1, upper: true, mark: "hex", ticks: true, glow: true, sweep: { ms: 7000, span: 0.5, steps: 16 },
+              font: '500 11px "Orbitron",sans-serif', land: "#f2efe9",
+              c: { ring: "rgba(111,227,255,.7)", faint: "rgba(111,227,255,.2)", text: "#dff6ff", halo: "rgba(2,10,22,.9)", me: "#ffffff", friend: "#8af3ff", way: "#ffb347", place: "#b6c8ff", tint: "rgba(0,40,80,.22)" } },
+  cyber:    { label: "Cyber", tiles: "osm", filter: "invert(1) grayscale(1) brightness(.65) contrast(1.5) sepia(1) hue-rotate(250deg) saturate(3)", px: 1, upper: true, mark: "square", badge: "square", glow: true, scan: true, dist: true,
+              font: '600 13px "Chakra Petch",sans-serif', land: "#f2efe9",
+              c: { ring: "rgba(255,43,214,.75)", faint: "rgba(255,43,214,.2)", text: "#fdf5ff", halo: "rgba(13,2,20,.9)", me: "#fcee0a", friend: "#00f0ff", way: "#fcee0a", place: "#ff2bd6", tint: "rgba(40,0,60,.2)" } }
 };
 const fontOf = sk => /px/.test(sk.font) ? sk.font : sk.size + "px " + sk.font;
 
@@ -412,14 +457,15 @@ function shape(kind, x, y, r) {
   ctx.beginPath();
   if (kind === "circle") ctx.arc(x, y, r, 0, TAU);
   else if (kind === "square") ctx.rect(x - r, y - r, r * 2, r * 2);
+  else if (kind === "tri") { ctx.moveTo(x, y - r * 1.35); ctx.lineTo(x + r * 1.25, y + r); ctx.lineTo(x - r * 1.25, y + r); ctx.closePath(); }
+  else if (kind === "hex") { for (let i = 0; i < 6; i++) { const a = Math.PI / 6 + i * Math.PI / 3; ctx[i ? "lineTo" : "moveTo"](x + Math.cos(a) * r * 1.2, y + Math.sin(a) * r * 1.2); } ctx.closePath(); }
   else if (kind === "diamond") { ctx.moveTo(x, y - r * 1.25); ctx.lineTo(x + r * 1.25, y); ctx.lineTo(x, y + r * 1.25); ctx.lineTo(x - r * 1.25, y); ctx.closePath(); }
 }
-const MARK = { sonar: "circle", parchment: "circle", tactical: "diamond", pixel: "square" };
 function label(text, x, y, color, align) {
   const sk = SKINS[S.skin];
   ctx.font = fontOf(sk); ctx.textAlign = align || "center"; ctx.textBaseline = "top";
   const s = sk.upper ? text.toUpperCase() : text;
-  ctx.lineJoin = "round"; ctx.lineWidth = S.skin === "pixel" ? 4 : 3; ctx.strokeStyle = sk.c.halo; ctx.strokeText(s, x, y);
+  ctx.lineJoin = "round"; ctx.lineWidth = sk.halo || 3; ctx.strokeStyle = sk.c.halo; ctx.strokeText(s, x, y);
   ctx.fillStyle = color || sk.c.text; ctx.fillText(s, x, y);
 }
 function glyph(kind, x, y, color) {
@@ -448,24 +494,24 @@ function drawHud(t) {
   for (let i = 1; i <= 5; i++) {
     ctx.beginPath(); ctx.arc(me.x, me.y, i * R / 5, 0, TAU);
     ctx.strokeStyle = i === 5 ? c.ring : c.faint; ctx.lineWidth = i === 5 ? 2 : 1;
-    ctx.setLineDash(S.skin === "parchment" ? [6, 5] : S.skin === "pixel" ? [4, 4] : []);
+    ctx.setLineDash(sk.dash || []);
     ctx.stroke();
   }
   ctx.setLineDash([]);
   if (R > 90) for (const i of [1, 3, 5]) label(i * RANGE_MI / 5 + " mi", me.x + 4, me.y - i * R / 5 + (i === 5 && !S.expanded ? 6 : 3), c.rl || c.ring, "left");
 
   // crosshair + bearing ticks
-  if (S.skin !== "parchment") {
+  if (sk.cross !== false) {
     ctx.strokeStyle = c.faint; ctx.lineWidth = 1; ctx.beginPath();
     ctx.moveTo(me.x - R, me.y); ctx.lineTo(me.x + R, me.y); ctx.moveTo(me.x, me.y - R); ctx.lineTo(me.x, me.y + R); ctx.stroke();
   }
-  if (S.skin === "tactical") {
+  if (sk.ticks) {
     ctx.strokeStyle = c.ring; ctx.beginPath();
     for (let d = 0; d < 360; d += 10) { const a = (d - 90) * RAD, r0 = R - (d % 30 ? 5 : 10); ctx.moveTo(me.x + Math.cos(a) * r0, me.y + Math.sin(a) * r0); ctx.lineTo(me.x + Math.cos(a) * R, me.y + Math.sin(a) * R); }
     ctx.stroke();
   }
   // north marker
-  if (S.skin === "parchment") {
+  if (sk.rose) {
     const nx = me.x, ny = me.y - R + 26;
     ctx.fillStyle = c.me; ctx.beginPath(); ctx.moveTo(nx, ny - 14); ctx.lineTo(nx + 5, ny); ctx.lineTo(nx, ny - 3); ctx.lineTo(nx - 5, ny); ctx.closePath(); ctx.fill();
     label("N", nx, ny + 2, c.text);
@@ -473,9 +519,9 @@ function drawHud(t) {
 
   // sweep
   let sweep = null;
-  if (!REDUCED && (S.skin === "sonar" || S.skin === "tactical")) {
-    sweep = (t / (S.skin === "sonar" ? 4000 : 9000) * TAU) % TAU;
-    const steps = S.skin === "sonar" ? 36 : 10, span = S.skin === "sonar" ? 1.1 : 0.25;
+  if (!REDUCED && sk.sweep) {
+    sweep = (t / sk.sweep.ms * TAU) % TAU;
+    const steps = sk.sweep.steps, span = sk.sweep.span;
     for (let i = 0; i < steps; i++) {
       ctx.beginPath(); ctx.moveTo(me.x, me.y); ctx.arc(me.x, me.y, R, sweep - span * (i + 1) / steps, sweep - span * i / steps); ctx.closePath();
       ctx.fillStyle = c.friend; ctx.globalAlpha = 0.22 * (1 - i / steps); ctx.fill();
@@ -484,14 +530,14 @@ function drawHud(t) {
   }
   const pulse = REDUCED ? 0.5 : (t % 1800) / 1800, blink = REDUCED || Math.floor(t / 450) % 2 === 0;
   const hits = [], isSel = (type, id) => S.sel && S.sel.type === type && S.sel.id === id;
-  const selRing = (x, y) => { ctx.strokeStyle = c.text; ctx.lineWidth = 2; shape(MARK[S.skin], x, y, 15); ctx.stroke(); };
+  const selRing = (x, y) => { ctx.strokeStyle = c.text; ctx.lineWidth = 2; shape(sk.mark, x, y, 15); ctx.stroke(); };
 
   // permanent markers: yours, plus ones friends chose to share
   for (const m of S.markers) {
     const s = toScreen(m), far = dist(S.me, m) > RANGE;
     if (far && !S.expanded) continue;
     const col = m.mine ? c.place : c.friend;
-    ctx.fillStyle = c.halo; shape(S.skin === "pixel" || S.skin === "tactical" ? "square" : "circle", s.x, s.y, 13); ctx.fill();
+    ctx.fillStyle = c.halo; shape(sk.badge || "circle", s.x, s.y, 13); ctx.fill();
     ctx.strokeStyle = col; ctx.lineWidth = 1.5; ctx.stroke();
     glyph(m.kind, s.x, s.y, col);
     label(m.name, s.x, s.y + 15, col);
@@ -504,7 +550,7 @@ function drawHud(t) {
     const s = toScreen(wpt), far = dist(S.me, wpt) > RANGE;
     if (far && !S.expanded) continue;
     ctx.strokeStyle = c.way; ctx.lineWidth = 2; ctx.globalAlpha = 1 - pulse;
-    shape(MARK[S.skin], s.x, s.y, 6 + pulse * 16); ctx.stroke(); ctx.globalAlpha = 1;
+    shape(sk.mark, s.x, s.y, 6 + pulse * 16); ctx.stroke(); ctx.globalAlpha = 1;
     ctx.beginPath(); ctx.moveTo(s.x, s.y + 2); ctx.lineTo(s.x, s.y - 16); ctx.lineWidth = 2.5; ctx.strokeStyle = c.halo; ctx.stroke(); ctx.lineWidth = 1.5; ctx.strokeStyle = c.way; ctx.stroke();
     ctx.fillStyle = c.way; ctx.beginPath(); ctx.moveTo(s.x, s.y - 16); ctx.lineTo(s.x + 11, s.y - 11.5); ctx.lineTo(s.x, s.y - 7); ctx.closePath(); ctx.fill();
     label(wpt.title + (wpt.joiners.length ? " +" + wpt.joiners.length : ""), s.x, s.y + 6, c.way);
@@ -524,14 +570,14 @@ function drawHud(t) {
       continue;
     }
     let a = stale ? 0.45 : 1;
-    if (sweep != null && S.skin === "sonar") { const diff = ((sweep - ang) % TAU + TAU) % TAU; a *= 0.45 + 0.55 * Math.exp(-diff * 1.1); }
-    if (S.skin === "pixel" && !blink && !stale) a *= 0.8;
+    if (sweep != null && sk.fade) { const diff = ((sweep - ang) % TAU + TAU) % TAU; a *= 0.45 + 0.55 * Math.exp(-diff * 1.1); }
+    if (sk.blink && !blink && !stale) a *= 0.8;
     ctx.globalAlpha = a;
-    if (S.skin === "sonar") { ctx.shadowColor = c.friend; ctx.shadowBlur = 12; }
-    ctx.fillStyle = c.friend; shape(MARK[S.skin], s.x, s.y, 6); ctx.fill(); ctx.shadowBlur = 0;
-    ctx.strokeStyle = c.halo; ctx.lineWidth = S.skin === "pixel" ? 3 : 1.5; ctx.stroke();
+    if (sk.glow) { ctx.shadowColor = c.friend; ctx.shadowBlur = 12; }
+    ctx.fillStyle = c.friend; shape(sk.mark, s.x, s.y, 6); ctx.fill(); ctx.shadowBlur = 0;
+    ctx.strokeStyle = c.halo; ctx.lineWidth = sk.halo ? 3 : 1.5; ctx.stroke();
     ctx.globalAlpha = 1;
-    label(S.skin === "tactical" ? f.name + " " + fmtDist(d) : f.name, s.x, s.y + 9, c.text);
+    label(sk.dist ? f.name + " " + fmtDist(d) : f.name, s.x, s.y + (sk.mark === "tri" ? 10 : 9), c.text);
     if (isSel("friend", f.id)) selRing(s.x, s.y);
     hits.push({ type: "friend", id: f.id, x: s.x, y: s.y });
   }
@@ -540,6 +586,7 @@ function drawHud(t) {
   ctx.fillStyle = c.me; ctx.strokeStyle = c.halo; ctx.lineWidth = 2;
   ctx.beginPath(); ctx.moveTo(me.x, me.y - 10); ctx.lineTo(me.x + 7, me.y + 7); ctx.lineTo(me.x, me.y + 3); ctx.lineTo(me.x - 7, me.y + 7); ctx.closePath(); ctx.stroke(); ctx.fill();
 
+  if (sk.scan) { ctx.fillStyle = "rgba(0,0,0,.16)"; for (let y = 0; y < h; y += 3) ctx.fillRect(0, y, w, 1); }
   if (S.placing) { ctx.fillStyle = c.way; ctx.globalAlpha = 0.08 + 0.06 * Math.sin(t / 300); ctx.fillRect(0, 0, w, h); ctx.globalAlpha = 1; }
   S.hits = hits;
 }
@@ -595,7 +642,7 @@ hudC.addEventListener("wheel", e => { if (!S.expanded) return; e.preventDefault(
 function tap(x, y) {
   if (S.placing) {
     const p = toLatLng(x, y), kind = S.placing;
-    if (!S.expanded && Math.hypot(x - S.size.w / 2, y - S.size.h / 2) > Math.min(S.size.w, S.size.h) / 2) return;
+    if (!S.expanded && !SKINS[S.skin].square && Math.hypot(x - S.size.w / 2, y - S.size.h / 2) > Math.min(S.size.w, S.size.h) / 2) return;
     setPlacing(null);
     if (kind === "waypoint") { S.pendingSpot = p; $("wpTitle").value = ""; $("wpDialog").showModal(); }
     else openMarkerDialog(p);
@@ -608,7 +655,7 @@ function tap(x, y) {
 }
 const KIND_LABEL = { home: "Home", work: "Work", school: "School", meetup: "Meetup spot" };
 function openMarkerDialog(p) {
-  S.pendingSpot = p; $("mkKind").value = "home"; $("mkName").value = ""; $("mkName").placeholder = "Home"; $("mkShared").checked = false;
+  S.pendingSpot = p; $("mkKind").value = "home"; $("mkName").value = ""; $("mkName").placeholder = "Home"; $("mkShared").checked = true;
   $("mkDialog").showModal();
 }
 function meetAt(m) { S.pendingSpot = { lat: m.lat, lng: m.lng }; $("wpTitle").value = m.name; $("wpDialog").showModal(); }
@@ -690,7 +737,7 @@ function renderPanel() {
       h("div", { class: "grow" }, h("div", { class: "name" }, wpt.title), h("div", { class: "meta" }, wpt.kind + " · " + wpt.ownerName + " · " + fmtDist(dist(S.me, wpt)) + " · " + until(wpt.expiresAt) + (wpt.joiners.length ? " · " + wpt.joiners.length + " going" : ""))),
       h("button", { type: "button", on: { click: () => select("waypoint", wpt.id) } }, "Show")));
   } else {
-    p.append(h("div", { class: "meta" }, "Markers stay until you remove them. They are private unless you choose to share one with friends."),
+    p.append(h("div", { class: "meta" }, "Markers stay until you remove them. Friends can see them unless you untick sharing or tap Stop sharing."),
       h("div", { class: "row" },
         h("button", { type: "button", class: "primary grow", on: { click: () => { setPlacing("marker"); $("stage").scrollIntoView({ block: "nearest" }); } } }, "Add marker on map"),
         h("button", { type: "button", class: "grow", on: { click: () => openMarkerDialog({ lat: S.me.lat, lng: S.me.lng }) } }, "Add where I am")));
@@ -743,11 +790,12 @@ $("expand").addEventListener("click", () => setExpanded(!S.expanded));
 $("recenter").addEventListener("click", () => { S.follow = true; fitRange(); mapDirty = true; });
 $("skinCycle").addEventListener("click", () => { const k = Object.keys(SKINS); setSkin(k[(k.indexOf(S.skin) + 1) % k.length]); });
 $("drop").addEventListener("click", () => setPlacing(S.placing === "waypoint" ? null : "waypoint"));
+$("addMk").addEventListener("click", () => setPlacing(S.placing === "marker" ? null : "marker"));
 $("cancelPlace").addEventListener("click", () => setPlacing(null));
 $("ghost").addEventListener("click", () => { setGhost(!S.ghost); act(() => api.setSharing(!S.ghost), S.ghost ? "Friends can no longer see you." : "Sharing your location with friends."); if (!S.ghost) lastPush = { t: 0, p: null }; });
 $("wpCancel").addEventListener("click", () => $("wpDialog").close());
 $("mkCancel").addEventListener("click", () => $("mkDialog").close());
-$("mkKind").addEventListener("change", () => { const k = $("mkKind").value; $("mkName").placeholder = k === "meetup" ? "The usual park" : KIND_LABEL[k]; $("mkShared").checked = k === "meetup"; });
+$("mkKind").addEventListener("change", () => { const k = $("mkKind").value; $("mkName").placeholder = k === "meetup" ? "The usual park" : KIND_LABEL[k]; });
 $("mkForm").addEventListener("submit", e => {
   e.preventDefault();
   const name = $("mkName").value.trim(); if (!name || !S.pendingSpot) return;

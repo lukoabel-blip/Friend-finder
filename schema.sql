@@ -145,7 +145,7 @@ create policy "join a friend's waypoint" on public.waypoint_joins for insert to 
 create policy "leave waypoint" on public.waypoint_joins for delete to authenticated using (user_id = auth.uid());
 
 -- Permanent markers: any number of homes, workplaces, schools and repeat meetup spots.
--- Private by default; the owner can share one with accepted friends.
+-- The app shares new markers with accepted friends by default; the owner can make any private.
 -- (The older `places` table above is no longer used by the app.)
 create table public.markers (
   id uuid primary key default gen_random_uuid(),
