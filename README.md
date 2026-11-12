@@ -24,7 +24,7 @@ Supabase asks new accounts to confirm their email by default. You can turn that 
 - Friends: each account gets an 8-character code. Entering a code sends a request; the other person accepts. Only accepted friends can read each other's location and waypoints (enforced in the database, not just the app).
 - Waypoints: tap "Drop waypoint", tap the map, name it, pick how long it lasts. Friends can tap "I'm in".
 - Places: home, school and work are stored per user and never shown to anyone else.
-- Map: CARTO raster tiles of OpenStreetMap data, recolored per overlay. The app polls for updates every 8 seconds.
+- Map: OpenStreetMap's standard tiles, recolored per overlay. The app polls for updates every 8 seconds.
 
 ## Known limits
 - A web page only tracks location while it is open on screen. Background tracking needs the native app.
@@ -34,7 +34,7 @@ Supabase asks new accounts to confirm their email by default. You can turn that 
 Wrap this same code with Capacitor: add `@capacitor/geolocation` plus a background-geolocation plugin, and push notifications for friend requests and waypoints. The data layer (`supabaseApi`) carries over unchanged.
 
 ## Before opening to the public
-- A map tile plan with terms that cover a public app (the free CARTO tiles are for light use).
+- A map tile plan with terms that cover a public app (OpenStreetMap's own tile server is for light use only).
 - Privacy policy, account deletion, block and report, and an age gate.
 - Optional approximate-location mode and per-friend sharing controls.
 - Rate limits on friend-code lookups.
