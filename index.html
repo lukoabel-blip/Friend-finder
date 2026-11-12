@@ -86,8 +86,15 @@ body.expanded #card{position:fixed;left:10px;right:10px;bottom:34px;z-index:12}
 .grow{flex:1 1 140px;min-width:0}
 .meta{color:var(--dim);font-size:.88em}
 #skins,#tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
-#skins{display:flex;flex-direction:column;gap:4px}
-#skinSel{width:100%;min-height:44px;font-size:1.05em;text-transform:uppercase;letter-spacing:.04em;color:var(--ink)}
+#skins{display:flex;flex-direction:column;gap:6px}
+#skinBtn{width:100%;min-height:46px;display:flex;align-items:center;gap:10px;text-align:left}
+#skinCur{flex:1;font:1.05em var(--font-display);text-transform:uppercase;letter-spacing:.05em;color:var(--accent)}
+#skinCaret{width:9px;height:9px;border-right:2px solid var(--ink);border-bottom:2px solid var(--ink);transform:rotate(45deg);margin:0 4px 4px 0;flex:none}
+#skinBtn[aria-expanded="true"] #skinCaret{transform:rotate(-135deg);margin:4px 4px 0 0}
+#skinList{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:6px;padding:8px;background:var(--panel);border:var(--edge) solid var(--accent);border-radius:var(--radius)}
+#skinList button{display:flex;flex-direction:column;align-items:flex-start;gap:6px;padding:8px;background:var(--bg);text-transform:uppercase;letter-spacing:.03em;font-size:.9em;overflow-wrap:anywhere}
+#skinList .sw{display:flex;gap:3px}
+#skinList .sw i{width:14px;height:8px;display:block;border-radius:calc(var(--radius) / 2)}
 #tabs{grid-template-columns:repeat(3,1fr)}
 #panel{display:flex;flex-direction:column;gap:10px}
 .item{border:var(--edge) solid var(--line);border-radius:var(--radius);padding:8px 10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;background:var(--panel)}
@@ -135,7 +142,10 @@ label input,label select{color:var(--ink);width:100%}
 
   <div id="card" hidden></div>
 
-  <label id="skins">Overlay style<select id="skinSel"></select></label>
+  <div id="skins">
+    <button id="skinBtn" type="button" aria-haspopup="listbox" aria-expanded="false" aria-controls="skinList"><span class="meta">Overlay style</span><span id="skinCur"></span><span id="skinCaret" aria-hidden="true"></span></button>
+    <div id="skinList" role="listbox" aria-label="Overlay style" hidden></div>
+  </div>
   <nav id="tabs" role="tablist" aria-label="Lists">
     <button type="button" role="tab" data-tab="friends" id="tab-friends">Friends</button>
     <button type="button" role="tab" data-tab="waypoints" id="tab-waypoints">Waypoints</button>
@@ -752,7 +762,8 @@ function renderPanel() {
 
 function setSkin(name) {
   S.skin = name; store.set("fr-skin", name); document.body.dataset.skin = name;
-  $("skinSel").value = name;
+  $("skinCur").textContent = SKINS[name].label;
+  for (const b of $("skinList").children) b.setAttribute("aria-selected", String(b.dataset.skin === name));
   resize();
 }
 function setExpanded(on) {
@@ -784,8 +795,14 @@ function startLocation() {
 }
 
 /* ---------- wiring ---------- */
-for (const name in SKINS) $("skinSel").append(h("option", { value: name }, SKINS[name].label));
-$("skinSel").addEventListener("change", e => setSkin(e.target.value));
+function openSkins(on) { $("skinList").hidden = !on; $("skinBtn").setAttribute("aria-expanded", String(on)); }
+for (const name in SKINS) {
+  const c = SKINS[name].c;
+  $("skinList").append(h("button", { type: "button", role: "option", "data-skin": name, on: { click: () => { setSkin(name); openSkins(false); $("skinBtn").focus(); } } },
+    SKINS[name].label, h("span", { class: "sw", "aria-hidden": "true" }, [c.friend, c.way, c.place, c.me].map(col => h("i", { style: "background:" + col })))));
+}
+$("skinBtn").addEventListener("click", () => openSkins($("skinList").hidden));
+document.addEventListener("click", e => { if (!$("skins").contains(e.target)) openSkins(false); });
 for (const b of $("tabs").children) b.addEventListener("click", () => { S.tab = b.dataset.tab; renderPanel(); });
 $("expand").addEventListener("click", () => setExpanded(!S.expanded));
 $("recenter").addEventListener("click", () => { S.follow = true; fitRange(); mapDirty = true; });
@@ -811,7 +828,7 @@ $("wpForm").addEventListener("submit", e => {
   $("wpDialog").close(); S.tab = "waypoints";
   act(() => api.addWaypoint(w), "Waypoint posted to your friends.");
 });
-document.addEventListener("keydown", e => { if (e.key === "Escape") { if (S.placing) setPlacing(null); else if (S.expanded && !$("wpDialog").open && !$("mkDialog").open) setExpanded(false); } });
+document.addEventListener("keydown", e => { if (e.key === "Escape") { if (!$("skinList").hidden) openSkins(false); else if (S.placing) setPlacing(null); else if (S.expanded && !$("wpDialog").open && !$("mkDialog").open) setExpanded(false); } });
 new ResizeObserver(() => { resize(); if (S.follow || !S.expanded) fitRange(); }).observe(stage);
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { mapDirty = true; });
 
