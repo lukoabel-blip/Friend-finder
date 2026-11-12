@@ -97,7 +97,7 @@ label input,label select{color:var(--ink);width:100%}
   <div id="stageWrap">
     <div id="stage">
       <canvas id="map" aria-hidden="true"></canvas>
-      <canvas id="hud" role="img" aria-label="Radar showing friends, waypoints and your places within 5 miles"></canvas>
+      <canvas id="hud" role="img" aria-label="Radar showing friends, waypoints and your places within 2.5 miles"></canvas>
       <div id="attr">© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors</div>
     </div>
   </div>
@@ -152,7 +152,7 @@ const CONFIG = { SUPABASE_URL: "https://vtrahdqxgwwwohraflfg.supabase.co", SUPAB
 const SUPABASE_JS = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js";
 /* =================================================================================== */
 
-const MI = 1609.344, RANGE = 5 * MI, TAU = Math.PI * 2, RAD = Math.PI / 180;
+const MI = 1609.344, RANGE_MI = 2.5, RANGE = RANGE_MI * MI, TAU = Math.PI * 2, RAD = Math.PI / 180;
 const SAMPLE = { lat: 34.1184, lng: -118.3004 }; // used until the device gives a real position
 const LIVE = !!(CONFIG.SUPABASE_URL && CONFIG.SUPABASE_ANON_KEY);
 const REDUCED = matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -426,15 +426,15 @@ function drawHud(t) {
   }
   const me = toScreen(S.me), ppm = Math.cos(S.view.lat * RAD) / Math.cos(S.me.lat * RAD) / S.view.mpp, R = RANGE * ppm;
 
-  // range rings, one per mile
+  // five evenly spaced range rings out to the radar edge
   for (let i = 1; i <= 5; i++) {
-    ctx.beginPath(); ctx.arc(me.x, me.y, i * MI * ppm, 0, TAU);
+    ctx.beginPath(); ctx.arc(me.x, me.y, i * R / 5, 0, TAU);
     ctx.strokeStyle = i === 5 ? c.ring : c.faint; ctx.lineWidth = i === 5 ? 2 : 1;
     ctx.setLineDash(S.skin === "parchment" ? [6, 5] : S.skin === "pixel" ? [4, 4] : []);
     ctx.stroke();
   }
   ctx.setLineDash([]);
-  if (R > 90) for (const i of [1, 3, 5]) label(i + " mi", me.x + 4, me.y - i * MI * ppm + (i === 5 && !S.expanded ? 6 : 3), c.rl || c.ring, "left");
+  if (R > 90) for (const i of [1, 3, 5]) label(i * RANGE_MI / 5 + " mi", me.x + 4, me.y - i * R / 5 + (i === 5 && !S.expanded ? 6 : 3), c.rl || c.ring, "left");
 
   // crosshair + bearing ticks
   if (S.skin !== "parchment") {
@@ -607,7 +607,7 @@ function renderCard() {
     if (f && f.lat != null) {
       const d = dist(S.me, f);
       kids = [h("h2", {}, f.name),
-        h("div", { class: "meta" }, fmtDist(d) + " " + compass(bearing(S.me, f)) + " of you" + (d > RANGE ? ", outside your 5 mile radar" : "") + " · seen " + ago(f.updatedAt))];
+        h("div", { class: "meta" }, fmtDist(d) + " " + compass(bearing(S.me, f)) + " of you" + (d > RANGE ? ", outside your " + RANGE_MI + " mile radar" : "") + " · seen " + ago(f.updatedAt))];
     }
   } else if (s.type === "waypoint") {
     const wpt = S.waypoints.find(x => x.id === s.id);

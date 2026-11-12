@@ -1,6 +1,6 @@
 # Friend Radar
 
-A phone-first web app: a 5-mile radar centered on you, friends who have added each other, waypoints friends can join, private home / school / work markers, an expandable street map, and four game-style overlays (Sonar, Parchment, Tactical, Pixel).
+A phone-first web app: a 2.5-mile radar centered on you, friends who have added each other, waypoints friends can join, private home / school / work markers, an expandable street map, and four game-style overlays (Sonar, Parchment, Tactical, Pixel).
 
 Files
 - `index.html`: the whole app (no build step).
